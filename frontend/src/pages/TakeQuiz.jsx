@@ -1,57 +1,89 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { api } from '../services/api'
-import QuizTimer from '../components/QuizTimer'
-import QuestionCard from '../components/QuestionCard'
-import { FiArrowLeft, FiCheckCircle } from 'react-icons/fi'
+import { useParams, useNavigate } from 'react-router-dom'
+import { FiArrowLeft, FiCheckCircle, FiClock } from 'react-icons/fi'
 
-const TakeQuiz = () => {
+const TakeQuiz = ({ user }) => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const location = useLocation()
   
   const [quiz, setQuiz] = useState(null)
-  const [attempt, setAttempt] = useState(location.state?.attempt || null)
   const [answers, setAnswers] = useState({})
+  const [timeLeft, setTimeLeft] = useState(0)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    initializeQuiz()
+    // Load quiz data
+    setTimeout(() => {
+      setQuiz({
+        id: id,
+        title: 'Introduction to React',
+        description: 'Test your knowledge of React fundamentals',
+        duration: 30, // minutes
+        questions: [
+          {
+            id: 'q1',
+            text: 'What is React primarily used for?',
+            type: 'mcq',
+            options: [
+              'Backend development',
+              'Building user interfaces',
+              'Database management',
+              'Mobile app development (only)'
+            ],
+            correctAnswer: 'Building user interfaces',
+            marks: 2
+          },
+          {
+            id: 'q2',
+            text: 'React components must return a single JSX element',
+            type: 'true_false',
+            correctAnswer: 'True',
+            marks: 1
+          },
+          {
+            id: 'q3',
+            text: 'What does JSX stand for?',
+            type: 'short_answer',
+            correctAnswer: 'JavaScript XML',
+            marks: 2
+          },
+          {
+            id: 'q4',
+            text: 'Which of these are React hooks? (Select all that apply)',
+            type: 'mcq',
+            options: [
+              'useState',
+              'useEffect',
+              'useContext',
+              'All of the above'
+            ],
+            correctAnswer: 'All of the above',
+            marks: 3
+          }
+        ]
+      })
+      setTimeLeft(30 * 60) // Convert minutes to seconds
+      setLoading(false)
+    }, 800)
   }, [id])
 
   useEffect(() => {
-    // Save answers to localStorage for recovery
-    if (Object.keys(answers).length > 0) {
-      localStorage.setItem(`quiz_${id}_answers`, JSON.stringify(answers))
-    }
-  }, [answers, id])
+    if (timeLeft <= 0 || !quiz) return
 
-  const initializeQuiz = async () => {
-    try {
-      // If no attempt exists in state, start a new one
-      if (!attempt) {
-        const response = await api.post('/attempts/start', { quizId: id })
-        setAttempt(response.attempt)
-      }
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          handleAutoSubmit()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
 
-      // Load quiz data
-      const quizData = await api.get(`/quizzes/${id}`)
-      setQuiz(quizData.quiz)
-
-      // Load saved answers
-      const savedAnswers = localStorage.getItem(`quiz_${id}_answers`)
-      if (savedAnswers) {
-        setAnswers(JSON.parse(savedAnswers))
-      }
-    } catch (error) {
-      console.error('Failed to initialize quiz:', error)
-      alert(error.message || 'Failed to start quiz')
-      navigate('/')
-    } finally {
-      setLoading(false)
-    }
-  }
+    return () => clearInterval(timer)
+  }, [timeLeft, quiz])
 
   const handleAnswer = (questionId, answer) => {
     setAnswers(prev => ({
@@ -60,64 +92,92 @@ const TakeQuiz = () => {
     }))
   }
 
-  const handleSubmit = async () => {
-    if (!window.confirm('Are you sure you want to submit the quiz?')) return
-
-    setSubmitting(true)
-    try {
-      const answersArray = Object.entries(answers).map(([questionId, response]) => ({
-        questionId,
-        response
-      }))
-
-      const response = await api.post('/attempts/submit', {
-        attemptId: attempt._id,
-        answers: answersArray
-      })
-
-      // Clear saved answers
-      localStorage.removeItem(`quiz_${id}_answers`)
-
-      if (response.showResults) {
-        navigate(`/results/${response.attempt._id}`)
-      } else {
-        alert('Quiz submitted successfully! Results will be available later.')
-        navigate('/')
-      }
-    } catch (error) {
-      alert(error.message || 'Failed to submit quiz')
-    } finally {
-      setSubmitting(false)
+  const handleAutoSubmit = () => {
+    if (!submitting) {
+      alert('Time is up! Submitting your quiz...')
+      handleSubmit()
     }
   }
 
-  const handleTimeout = () => {
-    alert('Time is up! The quiz will be submitted automatically.')
-    handleSubmit()
+  const handleSubmit = () => {
+    if (!window.confirm('Are you sure you want to submit the quiz?')) return
+
+    setSubmitting(true)
+    
+    setTimeout(() => {
+      // Calculate score
+      let score = 0
+      let totalMarks = 0
+      
+      quiz.questions.forEach(question => {
+        totalMarks += question.marks
+        const userAnswer = answers[question.id]
+        
+        if (userAnswer && userAnswer === question.correctAnswer) {
+          score += question.marks
+        }
+      })
+      
+      const percentage = totalMarks > 0 ? Math.round((score / totalMarks) * 100) : 0
+      
+      alert(`Quiz submitted! Score: ${score}/${totalMarks} (${percentage}%)`)
+      navigate('/')
+    }, 1500)
   }
 
-  if (loading || !quiz || !attempt) {
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+
+  if (loading || !quiz) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="text-xl">Loading quiz...</div>
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600 mb-2"></div>
+          <p className="text-gray-600">Loading quiz...</p>
+        </div>
       </div>
     )
   }
 
+  const answeredCount = Object.keys(answers).length
+  const totalQuestions = quiz.questions.length
+
   return (
     <div className="max-w-4xl mx-auto">
-      {attempt.status === 'in_progress' && (
-        <QuizTimer
-          duration={quiz.duration}
-          attemptId={attempt._id}
-          onTimeout={handleTimeout}
-        />
-      )}
+      {/* Timer */}
+      <div className="fixed top-24 right-6 z-40">
+        <div className={`bg-white rounded-lg shadow-lg p-4 border-2 ${
+          timeLeft < 300 ? 'border-red-200' : 'border-blue-200'
+        }`}>
+          <div className="flex items-center space-x-3">
+            <FiClock className={`w-6 h-6 ${
+              timeLeft < 300 ? 'text-red-600' : 'text-blue-600'
+            }`} />
+            <div>
+              <div className={`text-2xl font-bold ${
+                timeLeft < 300 ? 'text-red-600' : 'text-gray-900'
+              }`}>
+                {formatTime(timeLeft)}
+              </div>
+              <div className="text-sm text-gray-500">Time remaining</div>
+            </div>
+          </div>
+          {timeLeft < 300 && (
+            <div className="mt-2 text-xs text-red-500 font-medium">
+              Hurry up! Less than 5 minutes left
+            </div>
+          )}
+        </div>
+      </div>
 
+      {/* Header */}
       <div className="mb-8">
         <button
           onClick={() => navigate('/')}
-          className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
+          className="flex items-center text-blue-600 hover:text-blue-800 mb-4 transition-colors"
         >
           <FiArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
@@ -129,67 +189,166 @@ const TakeQuiz = () => {
             <p className="text-gray-600 mt-2">{quiz.description}</p>
           </div>
           <div className="text-right">
-            <div className="text-sm text-gray-500">Attempt #{attempt.attemptNumber}</div>
-            <div className="text-lg font-semibold">
-              {quiz.questions.length} Questions
-            </div>
+            <div className="text-sm text-gray-500">Attempting as</div>
+            <div className="font-medium">{user.name}</div>
           </div>
         </div>
       </div>
 
-      <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div>
-              <div className="text-sm text-gray-600">Time Remaining</div>
-              <div className="text-lg font-semibold">{quiz.duration} minutes</div>
+      {/* Progress Bar */}
+      <div className="bg-white rounded-lg shadow p-6 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div className="text-sm text-gray-600">Progress</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {answeredCount} / {totalQuestions} questions
             </div>
-            <div>
-              <div className="text-sm text-gray-600">Progress</div>
-              <div className="text-lg font-semibold">
-                {Object.keys(answers).length} / {quiz.questions.length} answered
+          </div>
+          <div className="w-64">
+            <div className="flex justify-between text-sm text-gray-600 mb-1">
+              <span>{Math.round((answeredCount / totalQuestions) * 100)}% complete</span>
+              <span>{formatTime(timeLeft)} left</span>
+            </div>
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                style={{ width: `${(answeredCount / totalQuestions) * 100}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-gray-600">
+            Questions answered: {answeredCount}
+          </div>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <FiCheckCircle className="w-5 h-5" />
+            <span>{submitting ? 'Submitting...' : 'Submit Quiz'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Questions */}
+      <div className="space-y-6">
+        {quiz.questions.map((question, index) => {
+          const userAnswer = answers[question.id]
+          
+          return (
+            <div key={question.id} className="bg-white rounded-lg shadow">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                        Question {index + 1}
+                      </span>
+                      <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs font-medium rounded">
+                        {question.marks} mark{question.marks !== 1 ? 's' : ''}
+                      </span>
+                      <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs font-medium rounded">
+                        {question.type.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {question.text}
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  {question.type === 'mcq' && (
+                    <div className="space-y-3">
+                      {question.options.map((option, idx) => (
+                        <div key={idx} className="flex items-center">
+                          <input
+                            type="radio"
+                            id={`${question.id}-option-${idx}`}
+                            name={question.id}
+                            value={option}
+                            checked={userAnswer === option}
+                            onChange={(e) => handleAnswer(question.id, e.target.value)}
+                            className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label
+                            htmlFor={`${question.id}-option-${idx}`}
+                            className="ml-3 text-gray-700"
+                          >
+                            {option}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {question.type === 'true_false' && (
+                    <div className="space-y-3">
+                      {['True', 'False'].map((option) => (
+                        <div key={option} className="flex items-center">
+                          <input
+                            type="radio"
+                            id={`${question.id}-${option}`}
+                            name={question.id}
+                            value={option}
+                            checked={userAnswer === option}
+                            onChange={(e) => handleAnswer(question.id, e.target.value)}
+                            className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                          />
+                          <label
+                            htmlFor={`${question.id}-${option}`}
+                            className="ml-3 text-gray-700"
+                          >
+                            {option}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {question.type === 'short_answer' && (
+                    <div>
+                      <textarea
+                        value={userAnswer || ''}
+                        onChange={(e) => handleAnswer(question.id, e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        rows={4}
+                        placeholder="Type your answer here..."
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+          )
+        })}
+      </div>
+
+      {/* Submit Section */}
+      <div className="mt-10 pt-8 border-t border-gray-200">
+        <div className="flex justify-between items-center">
+          <div className="text-gray-600">
+            {totalQuestions - answeredCount} question{totalQuestions - answeredCount !== 1 ? 's' : ''} remaining
           </div>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="btn btn-primary flex items-center space-x-2"
-          >
-            <FiCheckCircle />
-            <span>{submitting ? 'Submitting...' : 'Submit Quiz'}</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        {quiz.questions.map((question, index) => (
-          <QuestionCard
-            key={question._id}
-            question={question}
-            index={index}
-            onAnswer={handleAnswer}
-            initialAnswer={answers[question._id]}
-          />
-        ))}
-      </div>
-
-      <div className="mt-8 pt-8 border-t">
-        <div className="flex justify-between">
-          <button
-            onClick={() => navigate('/')}
-            className="btn btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="btn btn-primary flex items-center space-x-2"
-          >
-            <FiCheckCircle />
-            <span>{submitting ? 'Submitting...' : 'Submit Quiz'}</span>
-          </button>
+          <div className="flex space-x-4">
+            <button
+              onClick={() => navigate('/')}
+              className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <FiCheckCircle className="w-5 h-5" />
+              <span>{submitting ? 'Submitting...' : 'Submit Quiz'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

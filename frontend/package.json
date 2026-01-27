@@ -6,15 +6,17 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tailwind:build": "npx tailwindcss -i ./src/index.css -o ./src/output.css",
+    "tailwind:watch": "npx tailwindcss -i ./src/index.css -o ./src/output.css --watch"
   },
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.15.0",
-    "axios": "^1.5.0",
     "react-icons": "^4.11.0",
-    "date-fns": "^2.30.0"
+    "date-fns": "^2.30.0",
+    "axios": "^1.5.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",

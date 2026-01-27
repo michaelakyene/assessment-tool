@@ -25,4 +25,5 @@ router.get('/:id/results', authMiddleware, roleMiddleware('lecturer'), getQuizRe
 router.get('/available', authMiddleware, getAvailableQuizzes);
 router.get('/:id', authMiddleware, getQuizById);
 
+// Export router
 module.exports = router;
