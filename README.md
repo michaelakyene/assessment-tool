@@ -35,4 +35,34 @@ A comprehensive web-based assessment platform for educational institutions, buil
 - **Socket.io** for real-time communication
 - **Swagger** for API documentation
 
-## 📁 Project Structure
+## � Quick Links
+
+- **[Setup Guide](./SETUP.md)** - Local development setup
+- **[Deployment Guide](./DEPLOYMENT.md)** - Production deployment
+- **[Quick Deploy Reference](./QUICK_DEPLOY.md)** - Quick checklist for deployment
+
+## 🚀 Quick Start
+
+### Development
+```bash
+# Backend
+cd backend
+npm install
+npm start
+
+# Frontend (in another terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+Visit http://localhost:5173 (frontend) and http://localhost:5000/api-docs (API docs)
+
+### Production Deployment
+1. **Frontend**: Deploy to [Vercel](https://vercel.com) or [Netlify](https://netlify.com)
+2. **Backend**: Deploy to [Railway](https://railway.app) or [Heroku](https://heroku.com)
+3. **Database**: Use [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
+
+## �📁 Project Structure

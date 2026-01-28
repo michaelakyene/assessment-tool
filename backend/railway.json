@@ -1,0 +1,12 @@
+{
+  "build": {
+    "builder": "nixpacks",
+    "buildCommand": "npm install"
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "startCommand": "npm start",
+    "healthcheckPath": "/api-docs",
+    "healthcheckTimeout": 100
+  }
+}

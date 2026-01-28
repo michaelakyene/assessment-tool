@@ -63,6 +63,19 @@ app.use('/uploads', express.static('uploads'));
 // Swagger documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Student Assessment System API',
+    status: 'running',
+    version: '1.0.0',
+    endpoints: {
+      docs: '/api-docs',
+      api: '/api/*'
+    }
+  });
+});
+
 // Routes
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);

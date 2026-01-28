@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import LecturerDashboard from './pages/LecturerDashboard'
@@ -7,10 +7,11 @@ import TakeQuiz from './pages/TakeQuiz'
 import Results from './pages/Results'
 import Navbar from './components/Navbar'
 import ErrorBoundary from './components/ErrorBoundary'
-import { useAuthStore } from './store/useAuthStore'
+import useAuthStore from './store/useAuthStore'
 
 function App() {
-  const { user, loading, setUser, setLoading, logout } = useAuthStore()
+  const { user, logout, setUser } = useAuthStore()
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const initAuth = async () => {
@@ -34,7 +35,7 @@ function App() {
       setLoading(false)
     }
     initAuth()
-  }, [])
+  }, [logout, setUser])
 
   const login = (userData) => {
     setUser(userData)

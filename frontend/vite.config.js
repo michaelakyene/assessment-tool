@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
-    open: true,
+    open: false,
     cors: true,
     proxy: {
       '/api': {
@@ -19,15 +19,26 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: false, // Set to false in production for better performance
+    minify: 'terser',
     rollupOptions: {
       output: {
-        manualChunks: undefined
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react'
+            }
+            if (id.includes('react-router') || id.includes('zustand')) {
+              return 'state'
+            }
+            return 'vendor'
+          }
+        }
       }
     }
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom', 'react-icons', 'date-fns']
+    include: ['react', 'react-dom', 'react-router-dom', 'react-icons', 'date-fns', 'axios', 'zustand']
   },
   css: {
     postcss: './postcss.config.js'

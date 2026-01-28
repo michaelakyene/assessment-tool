@@ -1,14 +1,14 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import { registerSW } from 'virtual:pwa-register' // NEW
+// import { registerSW } from 'virtual:pwa-register' // PWA disabled for now
 import App from './App'
 import './index.css'
 
-// Register PWA service worker
-if ('serviceWorker' in navigator) {
-  registerSW();
-}
+// Register PWA service worker (disabled for now)
+// if ('serviceWorker' in navigator) {
+//   registerSW();
+// }
 
 const rootElement = document.getElementById('root')
 
