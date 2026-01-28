@@ -99,30 +99,48 @@ const TakeQuiz = ({ user }) => {
     }
   }
 
-  const handleSubmit = () => {
-    if (!window.confirm('Are you sure you want to submit the quiz?')) return
+  const handleSubmit = async () => {
+    if (submitting) return
+    
+    const unanswered = quiz.questions.length - Object.keys(answers).length
+    if (unanswered > 0) {
+      const confirmSubmit = window.confirm(
+        `You have ${unanswered} unanswered question${unanswered !== 1 ? 's' : ''}. Submit anyway?`
+      )
+      if (!confirmSubmit) return
+    }
 
     setSubmitting(true)
-    
-    setTimeout(() => {
-      // Calculate score
-      let score = 0
-      let totalMarks = 0
-      
-      quiz.questions.forEach(question => {
-        totalMarks += question.marks
-        const userAnswer = answers[question.id]
-        
-        if (userAnswer && userAnswer === question.correctAnswer) {
-          score += question.marks
-        }
+
+    try {
+      const response = await fetch(`/api/attempts/${id}/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ 
+          answers: Object.entries(answers).map(([questionId, response]) => ({
+            questionId,
+            response
+          }))
+        })
       })
+
+      const data = await response.json()
       
-      const percentage = totalMarks > 0 ? Math.round((score / totalMarks) * 100) : 0
-      
-      alert(`Quiz submitted! Score: ${score}/${totalMarks} (${percentage}%)`)
-      navigate('/')
-    }, 1500)
+      if (data.showResults) {
+        navigate(`/results/${data.attempt._id}`)
+      } else {
+        alert('Quiz submitted successfully!')
+        navigate('/')
+      }
+    } catch (error) {
+      console.error('Submission error:', error)
+      alert('Failed to submit quiz. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const formatTime = (seconds) => {

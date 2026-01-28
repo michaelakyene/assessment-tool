@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { FiLogOut, FiHome, FiUser, FiBell, FiSettings } from 'react-icons/fi'
+import Notifications from './realtime/Notifications'
 
 const Navbar = ({ user, logout }) => {
   return (
@@ -58,10 +59,7 @@ const Navbar = ({ user, logout }) => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <button className="relative p-2 text-gray-600 hover:text-primary-600 hover:bg-gray-50 rounded-lg transition-colors">
-              <FiBell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            <Notifications />
             
             <button className="p-2 text-gray-600 hover:text-primary-600 hover:bg-gray-50 rounded-lg transition-colors">
               <FiSettings className="w-5 h-5" />

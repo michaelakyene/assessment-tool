@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import LecturerDashboard from './pages/LecturerDashboard'
@@ -6,32 +6,39 @@ import StudentDashboard from './pages/StudentDashboard'
 import TakeQuiz from './pages/TakeQuiz'
 import Results from './pages/Results'
 import Navbar from './components/Navbar'
+import ErrorBoundary from './components/ErrorBoundary'
+import { useAuthStore } from './store/useAuthStore'
 
 function App() {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { user, loading, setUser, setLoading, logout } = useAuthStore()
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('assessment_user')
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser))
-      } catch (error) {
-        localStorage.removeItem('assessment_user')
+    const initAuth = async () => {
+      const token = localStorage.getItem('token')
+      if (token) {
+        try {
+          const response = await fetch('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+          if (response.ok) {
+            const userData = await response.json()
+            setUser(userData)
+          } else {
+            logout()
+          }
+        } catch (error) {
+          console.error('Auth init error:', error)
+          logout()
+        }
       }
+      setLoading(false)
     }
-    setLoading(false)
+    initAuth()
   }, [])
 
   const login = (userData) => {
     setUser(userData)
-    localStorage.setItem('assessment_user', JSON.stringify(userData))
-  }
-
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem('assessment_user')
-    window.location.href = '/login'
+    localStorage.setItem('token', userData.token)
   }
 
   if (loading) {
@@ -46,36 +53,37 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      {user && <Navbar user={user} logout={logout} />}
-      <main className="container mx-auto px-4 py-8">
-        <Routes>
-          <Route 
-            path="/login" 
-            element={!user ? <Login login={login} /> : <Navigate to="/" />} 
-          />
-          <Route 
-            path="/" 
-            element={
-              user ? (
-                user.role === 'lecturer' ? 
-                  <LecturerDashboard user={user} /> : 
-                  <StudentDashboard user={user} />
-              ) : (
-                <Navigate to="/login" />
-              )
-            } 
-          />
-          <Route 
-            path="/quiz/:id" 
-            element={user ? <TakeQuiz user={user} /> : <Navigate to="/login" />} 
-          />
-          <Route 
-            path="/results/:attemptId" 
-            element={user ? <Results user={user} /> : <Navigate to="/login" />} 
-          />
-        </Routes>
-      </main>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+        {user && <Navbar user={user} logout={logout} />}
+        <main className="container mx-auto px-4 py-8">
+          <Routes>
+            <Route 
+              path="/login" 
+              element={!user ? <Login login={login} /> : <Navigate to="/" />} 
+            />
+            <Route 
+              path="/" 
+              element={
+                user ? (
+                  user.role === 'lecturer' ? 
+                    <LecturerDashboard user={user} /> : 
+                    <StudentDashboard user={user} />
+                ) : (
+                  <Navigate to="/login" />
+                )
+              } 
+            />
+            <Route 
+              path="/quiz/:id" 
+              element={user ? <TakeQuiz user={user} /> : <Navigate to="/login" />} 
+            />
+            <Route 
+              path="/results/:attemptId" 
+              element={user ? <Results user={user} /> : <Navigate to="/login" />} 
+            />
+          </Routes>
+        </main>
       
       {/* Footer */}
       {user && (
@@ -100,7 +108,8 @@ function App() {
           </div>
         </footer>
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   )
 }
 
