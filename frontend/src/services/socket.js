@@ -9,7 +9,12 @@ class SocketService {
   connect(token) {
     if (this.socket) return;
 
-    this.socket = io('http://localhost:5000', {
+    // Get socket server URL from environment or use current domain
+    const socketURL = import.meta.env.VITE_API_URL 
+      ? import.meta.env.VITE_API_URL.replace('/api', '')
+      : window.location.origin;
+
+    this.socket = io(socketURL, {
       auth: { token },
       transports: ['websocket', 'polling']
     });
