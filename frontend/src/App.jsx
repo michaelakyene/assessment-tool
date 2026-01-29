@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
-import LecturerDashboard from './pages/LecturerDashboard'
+import EnhancedLecturerDashboard from './pages/EnhancedLecturerDashboard'
+import CreateQuizPage from './pages/CreateQuizPage'
 import StudentDashboard from './pages/StudentDashboard'
 import TakeQuiz from './pages/TakeQuiz'
 import Results from './pages/Results'
@@ -68,12 +69,20 @@ function App() {
               element={
                 user ? (
                   user.role === 'lecturer' ? 
-                    <LecturerDashboard user={user} /> : 
+                    <EnhancedLecturerDashboard user={user} /> : 
                     <StudentDashboard user={user} />
                 ) : (
                   <Navigate to="/login" />
                 )
               } 
+            />
+            <Route 
+              path="/create-quiz" 
+              element={user && user.role === 'lecturer' ? <CreateQuizPage /> : <Navigate to="/login" />} 
+            />
+            <Route 
+              path="/edit-quiz/:id" 
+              element={user && user.role === 'lecturer' ? <CreateQuizPage /> : <Navigate to="/login" />} 
             />
             <Route 
               path="/quiz/:id" 

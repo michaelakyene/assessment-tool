@@ -56,6 +56,44 @@ const quizSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  password: {
+    type: String,
+    default: null // Optional password protection
+  },
+  hasPassword: {
+    type: Boolean,
+    default: false
+  },
+  allowReview: {
+    type: Boolean,
+    default: true // Allow students to review answers after completion
+  },
+  showCorrectAnswers: {
+    type: Boolean,
+    default: false // Show correct answers in review
+  },
+  randomizeQuestions: {
+    type: Boolean,
+    default: false
+  },
+  randomizeOptions: {
+    type: Boolean,
+    default: false
+  },
+  passingScore: {
+    type: Number,
+    default: 50, // Percentage
+    min: 0,
+    max: 100
+  },
+  scheduledPublish: {
+    type: Date,
+    default: null
+  },
+  deadline: {
+    type: Date,
+    default: null
+  },
   questions: [questionSchema],
   createdAt: {
     type: Date,

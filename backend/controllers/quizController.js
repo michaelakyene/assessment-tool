@@ -4,7 +4,22 @@ const Attempt = require('../models/Attempt');
 // Create new quiz
 exports.createQuiz = async (req, res) => {
   try {
-    const { title, description, duration, maxAttempts, questions } = req.body;
+    const { 
+      title, 
+      description, 
+      duration, 
+      maxAttempts, 
+      questions,
+      password,
+      hasPassword,
+      allowReview,
+      showCorrectAnswers,
+      randomizeQuestions,
+      randomizeOptions,
+      passingScore,
+      scheduledPublish,
+      deadline
+    } = req.body;
 
     const quiz = new Quiz({
       title,
@@ -13,7 +28,16 @@ exports.createQuiz = async (req, res) => {
       maxAttempts,
       questions,
       createdBy: req.user._id,
-      isPublished: false
+      isPublished: false,
+      password: hasPassword ? password : null,
+      hasPassword: hasPassword || false,
+      allowReview: allowReview !== undefined ? allowReview : true,
+      showCorrectAnswers: showCorrectAnswers || false,
+      randomizeQuestions: randomizeQuestions || false,
+      randomizeOptions: randomizeOptions || false,
+      passingScore: passingScore || 50,
+      scheduledPublish: scheduledPublish || null,
+      deadline: deadline || null
     });
 
     await quiz.save();
@@ -175,5 +199,79 @@ exports.getAvailableQuizzes = async (req, res) => {
     res.json({ quizzes: quizzesWithAttempts });
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch quizzes', error: error.message });
+  }
+};
+
+// Verify quiz password
+exports.verifyQuizPassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+    const quiz = await Quiz.findById(req.params.id);
+    
+    if (!quiz) {
+      return res.status(404).json({ message: 'Quiz not found' });
+    }
+
+    if (!quiz.hasPassword) {
+      return res.status(400).json({ message: 'This quiz does not require a password' });
+    }
+
+    if (quiz.password === password) {
+      res.json({ 
+        success: true, 
+        message: 'Password verified successfully',
+        quiz: {
+          id: quiz._id,
+          title: quiz.title,
+          description: quiz.description,
+          duration: quiz.duration,
+          questions: quiz.questions
+        }
+      });
+    } else {
+      res.status(401).json({ success: false, message: 'Incorrect password' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to verify password', error: error.message });
+  }
+};
+
+// Duplicate quiz
+exports.duplicateQuiz = async (req, res) => {
+  try {
+    const originalQuiz = await Quiz.findOne({
+      _id: req.params.id,
+      createdBy: req.user._id
+    });
+
+    if (!originalQuiz) {
+      return res.status(404).json({ message: 'Quiz not found or unauthorized' });
+    }
+
+    const duplicatedQuiz = new Quiz({
+      title: `${originalQuiz.title} (Copy)`,
+      description: originalQuiz.description,
+      duration: originalQuiz.duration,
+      maxAttempts: originalQuiz.maxAttempts,
+      questions: originalQuiz.questions,
+      createdBy: req.user._id,
+      isPublished: false,
+      password: originalQuiz.password,
+      hasPassword: originalQuiz.hasPassword,
+      allowReview: originalQuiz.allowReview,
+      showCorrectAnswers: originalQuiz.showCorrectAnswers,
+      randomizeQuestions: originalQuiz.randomizeQuestions,
+      randomizeOptions: originalQuiz.randomizeOptions,
+      passingScore: originalQuiz.passingScore
+    });
+
+    await duplicatedQuiz.save();
+
+    res.status(201).json({
+      message: 'Quiz duplicated successfully',
+      quiz: duplicatedQuiz
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to duplicate quiz', error: error.message });
   }
 };
