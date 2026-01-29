@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { FiX, FiPlus, FiTrash2, FiLock, FiEye, FiEyeOff, FiClock, FiSettings } from 'react-icons/fi'
+import { FiX, FiPlus, FiTrash2, FiLock, FiEye, FiEyeOff, FiClock, FiSettings, FiCheckCircle, FiAlertCircle } from 'react-icons/fi'
 
 const QuizModal = ({ isOpen, onClose, onSave, quiz = null }) => {
   const [activeTab, setActiveTab] = useState('basic')
+  const [toast, setToast] = useState(null)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -41,6 +42,13 @@ const QuizModal = ({ isOpen, onClose, onSave, quiz = null }) => {
     }
   }, [quiz])
 
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [toast])
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormData(prev => ({
@@ -74,12 +82,12 @@ const QuizModal = ({ isOpen, onClose, onSave, quiz = null }) => {
 
   const addQuestion = () => {
     if (!currentQuestion.text || !currentQuestion.correctAnswer) {
-      alert('Please fill in question text and correct answer')
+      setToast({ message: 'Please fill in question text and correct answer', type: 'warning' })
       return
     }
 
     if (currentQuestion.type === 'mcq' && currentQuestion.options.filter(o => o.trim()).length < 2) {
-      alert('MCQ questions need at least 2 options')
+      setToast({ message: 'MCQ questions need at least 2 options', type: 'warning' })
       return
     }
 
@@ -87,6 +95,8 @@ const QuizModal = ({ isOpen, onClose, onSave, quiz = null }) => {
       ...prev,
       questions: [...prev.questions, { ...currentQuestion, id: Date.now() }]
     }))
+
+    setToast({ message: 'Question added successfully!', type: 'success' })
 
     setCurrentQuestion({
       text: '',
@@ -109,17 +119,18 @@ const QuizModal = ({ isOpen, onClose, onSave, quiz = null }) => {
     e.preventDefault()
     
     if (!formData.title || formData.questions.length === 0) {
-      alert('Please provide title and at least one question')
+      setToast({ message: 'Please provide title and at least one question', type: 'warning' })
       return
     }
 
     if (formData.hasPassword && !formData.password) {
-      alert('Please set a password or disable password protection')
+      setToast({ message: 'Please set a password or disable password protection', type: 'warning' })
       return
     }
 
     onSave(formData)
-    onClose()
+    setToast({ message: 'Quiz saved successfully!', type: 'success' })
+    setTimeout(() => onClose(), 1000)
   }
 
   if (!isOpen) return null
@@ -599,7 +610,18 @@ const QuizModal = ({ isOpen, onClose, onSave, quiz = null }) => {
           </button>
         </div>
       </div>
-    </div>
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-20 right-4 z-[60] animate-slideUp">
+          <div className={`${
+            toast.type === 'error' ? 'bg-red-500' : 
+            toast.type === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+          } text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 min-w-[300px]`}>
+            {toast.type === 'error' ? <FiAlertCircle className="w-5 h-5" /> : <FiCheckCircle className="w-5 h-5" />}
+            <span className="font-medium">{toast.message}</span>
+          </div>
+        </div>
+      )}    </div>
   )
 }
 

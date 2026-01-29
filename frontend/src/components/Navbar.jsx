@@ -1,12 +1,30 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { FiLogOut, FiHome, FiUser, FiBell, FiSettings } from 'react-icons/fi'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Notifications from './realtime/Notifications'
 
 const Navbar = ({ user, logout }) => {
   const navigate = useNavigate()
   const [showSettingsMenu, setShowSettingsMenu] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const settingsRef = useRef(null)
+  const profileRef = useRef(null)
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target)) {
+        setShowSettingsMenu(false)
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   return (
     <nav className="bg-white shadow-md border-b border-gray-200">
       <div className="container mx-auto px-4">
@@ -17,7 +35,7 @@ const Navbar = ({ user, logout }) => {
                 <FiHome className="w-5 h-5 text-white" />
               </div>
               <span className="font-bold text-lg text-gradient">
-                {user.role === 'lecturer' ? 'Lecturer Portal' : 'Student Portal'}
+                QuizMaster
               </span>
             </Link>
             
@@ -39,16 +57,10 @@ const Navbar = ({ user, logout }) => {
               {user.role === 'student' && (
                 <>
                   <Link 
-                    to="/quizzes" 
+                    to="/" 
                     className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 rounded-lg transition-colors"
                   >
                     Available Quizzes
-                  </Link>
-                  <Link 
-                    to="/attempts" 
-                    className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    My Attempts
                   </Link>
                 </>
               )}
@@ -58,7 +70,7 @@ const Navbar = ({ user, logout }) => {
           <div className="flex items-center space-x-4">
             <Notifications />
             
-            <div className="relative">
+            <div className="relative" ref={settingsRef}>
               <button 
                 onClick={() => setShowSettingsMenu(!showSettingsMenu)}
                 className="p-2 text-gray-600 hover:text-primary-600 hover:bg-gray-50 rounded-lg transition-colors"
@@ -109,7 +121,7 @@ const Navbar = ({ user, logout }) => {
               )}
             </div>
             
-            <div className="relative">
+            <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all duration-200 group"
@@ -144,6 +156,17 @@ const Navbar = ({ user, logout }) => {
                   </div>
                   
                   <div className="py-2">
+                    <button
+                      onClick={() => {
+                        navigate('/profile')
+                        setShowProfileMenu(false)
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center space-x-3 transition-colors"
+                    >
+                      <FiUser className="w-4 h-4" />
+                      <span className="font-medium">Edit Profile</span>
+                    </button>
+                    
                     <button
                       onClick={() => {
                         navigate('/')

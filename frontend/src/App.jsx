@@ -5,29 +5,29 @@ import EnhancedLecturerDashboard from './pages/EnhancedLecturerDashboard'
 import CreateQuizPage from './pages/CreateQuizPage'
 import StudentDashboard from './pages/StudentDashboard'
 import TakeQuiz from './pages/TakeQuiz'
+import ReviewQuiz from './pages/ReviewQuiz'
 import Results from './pages/Results'
+import Profile from './pages/Profile'
+import QuizAnalytics from './pages/QuizAnalytics'
 import Navbar from './components/Navbar'
 import ErrorBoundary from './components/ErrorBoundary'
 import useAuthStore from './store/useAuthStore'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 function App() {
   const { user, logout, setUser } = useAuthStore()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const initAuth = async () => {
+    const initAuth = () => {
       const token = localStorage.getItem('token')
-      if (token) {
+      const storedUser = localStorage.getItem('user')
+      
+      if (token && storedUser) {
         try {
-          const response = await fetch('/api/auth/me', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-          if (response.ok) {
-            const userData = await response.json()
-            setUser(userData)
-          } else {
-            logout()
-          }
+          const userData = JSON.parse(storedUser)
+          setUser(userData)
         } catch (error) {
           console.error('Auth init error:', error)
           logout()
@@ -40,7 +40,6 @@ function App() {
 
   const login = (userData) => {
     setUser(userData)
-    localStorage.setItem('token', userData.token)
   }
 
   if (loading) {
@@ -56,9 +55,9 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
         {user && <Navbar user={user} logout={logout} />}
-        <main className="container mx-auto px-4 py-8">
+        <main className="container mx-auto px-4 py-8 flex-1">
           <Routes>
             <Route 
               path="/login" 
@@ -77,6 +76,10 @@ function App() {
               } 
             />
             <Route 
+              path="/profile" 
+              element={user ? <Profile user={user} /> : <Navigate to="/login" />} 
+            />
+            <Route 
               path="/create-quiz" 
               element={user && user.role === 'lecturer' ? <CreateQuizPage /> : <Navigate to="/login" />} 
             />
@@ -89,6 +92,14 @@ function App() {
               element={user ? <TakeQuiz user={user} /> : <Navigate to="/login" />} 
             />
             <Route 
+              path="/quiz/:id/review" 
+              element={user ? <ReviewQuiz /> : <Navigate to="/login" />} 
+            />
+            <Route 
+              path="/quiz/:id/analytics" 
+              element={user && user.role === 'lecturer' ? <QuizAnalytics /> : <Navigate to="/login" />} 
+            />
+            <Route 
               path="/results/:attemptId" 
               element={user ? <Results user={user} /> : <Navigate to="/login" />} 
             />
@@ -97,20 +108,20 @@ function App() {
       
       {/* Footer */}
       {user && (
-        <footer className="mt-12 border-t border-gray-200 bg-white">
+        <footer className="border-t border-gray-200 bg-white mt-auto">
           <div className="container mx-auto px-4 py-6">
             <div className="flex flex-col md:flex-row justify-between items-center">
               <div className="text-gray-600 text-sm mb-4 md:mb-0">
-                © {new Date().getFullYear()} Student Assessment System
+                © {new Date().getFullYear()} QuizMaster - Student Assessment System
               </div>
               <div className="flex space-x-6">
-                <a href="#" className="text-gray-500 hover:text-primary-600 text-sm transition-colors">
+                <a href="#" className="text-gray-500 hover:text-blue-600 text-sm transition-colors">
                   Privacy Policy
                 </a>
-                <a href="#" className="text-gray-500 hover:text-primary-600 text-sm transition-colors">
+                <a href="#" className="text-gray-500 hover:text-blue-600 text-sm transition-colors">
                   Terms of Service
                 </a>
-                <a href="#" className="text-gray-500 hover:text-primary-600 text-sm transition-colors">
+                <a href="#" className="text-gray-500 hover:text-blue-600 text-sm transition-colors">
                   Help Center
                 </a>
               </div>

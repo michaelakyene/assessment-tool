@@ -21,6 +21,37 @@ exports.createQuiz = async (req, res) => {
       deadline
     } = req.body;
 
+    // Validate required fields
+    if (!title || !title.trim()) {
+      return res.status(400).json({ message: 'Quiz title is required' });
+    }
+    if (!duration || duration < 1) {
+      return res.status(400).json({ message: 'Duration must be at least 1 minute' });
+    }
+    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({ message: 'At least one question is required' });
+    }
+
+    // Validate questions structure
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      if (!q.text || !q.text.trim()) {
+        return res.status(400).json({ message: `Question ${i + 1}: Question text is required` });
+      }
+      if (!q.type) {
+        return res.status(400).json({ message: `Question ${i + 1}: Question type is required` });
+      }
+      if (!q.correctAnswer || !q.correctAnswer.trim()) {
+        return res.status(400).json({ message: `Question ${i + 1}: Correct answer is required` });
+      }
+      if (!q.marks || q.marks < 1) {
+        return res.status(400).json({ message: `Question ${i + 1}: Marks must be at least 1` });
+      }
+      if (q.type === 'mcq' && (!q.options || q.options.length < 2)) {
+        return res.status(400).json({ message: `Question ${i + 1}: MCQ requires at least 2 options` });
+      }
+    }
+
     const quiz = new Quiz({
       title,
       description,
@@ -47,6 +78,7 @@ exports.createQuiz = async (req, res) => {
       quiz
     });
   } catch (error) {
+    console.error('Quiz creation error:', error);
     res.status(500).json({ message: 'Failed to create quiz', error: error.message });
   }
 };
@@ -177,7 +209,7 @@ exports.getAvailableQuizzes = async (req, res) => {
     const quizzes = await Quiz.find({
       isPublished: true
     })
-    .select('title description duration maxAttempts createdAt')
+    .select('title description duration maxAttempts createdAt deadline questions hasPassword')
     .sort({ createdAt: -1 });
 
     // Check attempts for each quiz

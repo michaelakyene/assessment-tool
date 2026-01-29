@@ -99,10 +99,10 @@ const Login = ({ login }) => {
             <FiBook className="h-8 w-8 text-indigo-600" />
           </div>
           <h2 className="text-4xl font-extrabold text-white mb-2 tracking-tight">
-            {isLogin ? 'Welcome Back!' : 'Join Us Today'}
+            {isLogin ? 'QuizMaster' : 'Join QuizMaster'}
           </h2>
           <p className="text-indigo-100 text-lg">
-            Student Assessment System
+            Professional Assessment Platform
           </p>
         </div>
 
@@ -283,14 +283,6 @@ const Login = ({ login }) => {
                 </>
               )}
             </button>
-
-            {isLogin && (
-              <div className="text-center">
-                <a href="#" className="text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
-                  Forgot your password?
-                </a>
-              </div>
-            )}
           </form>
 
           <div className="px-8 py-6 bg-gradient-to-r from-gray-50 to-indigo-50 rounded-b-2xl border-t border-gray-100">
@@ -320,15 +312,9 @@ const Login = ({ login }) => {
           </div>
         </div>
 
-        <div className="text-center space-y-2">
-          <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg px-4 py-3 inline-block">
-            <p className="text-sm text-white font-medium mb-1">Demo Credentials</p>
-            <p className="text-xs text-indigo-100">
-              📧 test@example.com / 🔑 password123
-            </p>
-          </div>
-          <p className="text-xs text-indigo-200">
-            © 2026 Student Assessment System. All rights reserved.
+        <div className="text-center">
+          <p className="text-sm text-indigo-100">
+            © {new Date().getFullYear()} QuizMaster. All rights reserved.
           </p>
         </div>
       </div>

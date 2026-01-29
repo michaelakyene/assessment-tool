@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { FiX, FiPlus, FiTrash2, FiLock, FiClock, FiSettings, FiSave, FiArrowLeft } from 'react-icons/fi'
+import { FiX, FiPlus, FiTrash2, FiLock, FiClock, FiSettings, FiSave, FiArrowLeft, FiCheckCircle, FiAlertCircle, FiEdit } from 'react-icons/fi'
 import { format } from 'date-fns'
 import { createQuiz, updateQuiz, getQuizById } from '../services/quizService'
 
@@ -11,6 +11,8 @@ const CreateQuizPage = () => {
 
   const [activeTab, setActiveTab] = useState('basic')
   const [loading, setLoading] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState(null)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -54,8 +56,8 @@ const CreateQuizPage = () => {
         deadline: data.quiz.deadline ? format(new Date(data.quiz.deadline), "yyyy-MM-dd'T'HH:mm") : ''
       })
     } catch (error) {
-      alert('Failed to load quiz: ' + error.message)
-      navigate('/lecturer-dashboard')
+      setToast({ message: 'Failed to load quiz: ' + error.message, type: 'error' })
+      setTimeout(() => navigate('/lecturer-dashboard'), 2000)
     } finally {
       setLoading(false)
     }
@@ -105,24 +107,38 @@ const CreateQuizPage = () => {
 
   const addQuestion = () => {
     if (!currentQuestion.text.trim()) {
-      alert('Please enter question text')
+      setToast({ message: 'Please enter question text', type: 'warning' })
       return
     }
 
     if (currentQuestion.type === 'mcq' && currentQuestion.options.some(opt => !opt.trim())) {
-      alert('Please fill all options')
+      setToast({ message: 'Please fill all options', type: 'warning' })
       return
     }
 
     if (!currentQuestion.correctAnswer) {
-      alert('Please select the correct answer')
+      setToast({ message: 'Please select the correct answer', type: 'warning' })
       return
     }
 
-    setFormData(prev => ({
-      ...prev,
-      questions: [...prev.questions, { ...currentQuestion }]
-    }))
+    if (editingQuestionIndex !== null) {
+      // Update existing question
+      const updatedQuestions = [...formData.questions]
+      updatedQuestions[editingQuestionIndex] = { ...currentQuestion }
+      setFormData(prev => ({
+        ...prev,
+        questions: updatedQuestions
+      }))
+      setToast({ message: 'Question updated successfully!', type: 'success' })
+      setEditingQuestionIndex(null)
+    } else {
+      // Add new question
+      setFormData(prev => ({
+        ...prev,
+        questions: [...prev.questions, { ...currentQuestion }]
+      }))
+      setToast({ message: 'Question added successfully!', type: 'success' })
+    }
 
     setCurrentQuestion({
       type: 'mcq',
@@ -134,24 +150,111 @@ const CreateQuizPage = () => {
     })
   }
 
+  // Toast Component
+  const Toast = ({ message, type }) => {
+    const bgColor = type === 'error' ? 'bg-red-500' : type === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+    const icon = type === 'error' ? <FiAlertCircle className="w-5 h-5" /> : <FiCheckCircle className="w-5 h-5" />
+
+    useEffect(() => {
+      const timer = setTimeout(() => setToast(null), 3000)
+      return () => clearTimeout(timer)
+    }, [])
+
+    return (
+      <div className="fixed top-20 right-4 z-50 animate-slideUp">
+        <div className={`${bgColor} text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 min-w-[300px]`}>
+          {icon}
+          <span className="font-medium">{message}</span>
+        </div>
+      </div>
+    )
+  }
+
+  const editQuestion = (index) => {
+    const question = formData.questions[index]
+    setCurrentQuestion({ ...question })
+    setEditingQuestionIndex(index)
+    setToast({ message: 'Editing question. Make changes and click Update.', type: 'warning' })
+    // Scroll to the question form
+    setTimeout(() => {
+      document.getElementById('question-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 100)
+  }
+
+  const cancelEdit = () => {
+    setEditingQuestionIndex(null)
+    setCurrentQuestion({
+      type: 'mcq',
+      text: '',
+      options: ['', '', '', ''],
+      correctAnswer: '',
+      marks: 10,
+      explanation: ''
+    })
+    setToast({ message: 'Edit cancelled', type: 'warning' })
+  }
+
   const deleteQuestion = (index) => {
+    if (editingQuestionIndex === index) {
+      setEditingQuestionIndex(null)
+      setCurrentQuestion({
+        type: 'mcq',
+        text: '',
+        options: ['', '', '', ''],
+        correctAnswer: '',
+        marks: 10,
+        explanation: ''
+      })
+    }
     setFormData(prev => ({
       ...prev,
       questions: prev.questions.filter((_, i) => i !== index)
     }))
+    setToast({ message: 'Question deleted successfully!', type: 'success' })
   }
 
   const handleSubmit = async () => {
     if (!formData.title.trim()) {
-      alert('Please enter quiz title')
+      setToast({ message: 'Please enter a quiz title', type: 'warning' })
+      setActiveTab('basic')
+      return
+    }
+
+    if (!formData.duration || formData.duration < 1) {
+      setToast({ message: 'Duration must be at least 1 minute', type: 'warning' })
       setActiveTab('basic')
       return
     }
 
     if (formData.questions.length === 0) {
-      alert('Please add at least one question')
+      setToast({ message: 'Please add at least one question', type: 'warning' })
       setActiveTab('questions')
       return
+    }
+
+    // Validate all questions
+    for (let i = 0; i < formData.questions.length; i++) {
+      const q = formData.questions[i]
+      if (!q.text || !q.text.trim()) {
+        setToast({ message: `Question ${i + 1}: Question text is required`, type: 'warning' })
+        setActiveTab('questions')
+        return
+      }
+      if (!q.correctAnswer || !q.correctAnswer.trim()) {
+        setToast({ message: `Question ${i + 1}: Correct answer is required`, type: 'warning' })
+        setActiveTab('questions')
+        return
+      }
+      if (!q.marks || q.marks < 1) {
+        setToast({ message: `Question ${i + 1}: Marks must be at least 1`, type: 'warning' })
+        setActiveTab('questions')
+        return
+      }
+      if (q.type === 'mcq' && (!q.options || q.options.filter(o => o.trim()).length < 2)) {
+        setToast({ message: `Question ${i + 1}: MCQ requires at least 2 options`, type: 'warning' })
+        setActiveTab('questions')
+        return
+      }
     }
 
     try {
@@ -164,16 +267,16 @@ const CreateQuizPage = () => {
 
       if (isEditing) {
         await updateQuiz(id, quizData)
-        alert('Quiz updated successfully!')
+        setToast({ message: 'Quiz updated successfully!', type: 'success' })
       } else {
         await createQuiz(quizData)
-        alert('Quiz created successfully!')
+        setToast({ message: 'Quiz created successfully!', type: 'success' })
       }
 
-      navigate('/')
+      setTimeout(() => navigate('/'), 1500)
     } catch (error) {
-      alert('Failed to save quiz: ' + error.message)
-    } finally {
+      console.error('Error saving quiz:', error)
+      setToast({ message: 'Failed to save quiz: ' + (error.message || 'Unknown error'), type: 'error' })
       setLoading(false)
     }
   }
@@ -482,29 +585,135 @@ const CreateQuizPage = () => {
               <div className="space-y-6">
                 {/* Question List */}
                 {formData.questions.length > 0 && (
-                  <div className="space-y-3 mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900">Questions ({formData.questions.length})</h3>
+                  <div className="space-y-4 mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Questions ({formData.questions.length})
+                      </h3>
+                      <div className="text-sm text-gray-600">
+                        Total Marks: <span className="font-bold text-blue-600">{formData.questions.reduce((sum, q) => sum + (q.marks || 0), 0)}</span>
+                      </div>
+                    </div>
                     {formData.questions.map((q, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
-                        <div className="flex-1">
-                          <span className="font-medium text-gray-900">Q{index + 1}. </span>
-                          <span className="text-gray-700">{q.text}</span>
-                          <span className="ml-3 text-sm text-gray-500">({q.marks} marks)</span>
+                      <div key={index} className={`rounded-lg p-5 transition-all ${
+                        editingQuestionIndex === index
+                          ? 'bg-gradient-to-r from-blue-100 to-blue-50 border-2 border-blue-500 shadow-lg ring-2 ring-blue-300 ring-opacity-50'
+                          : 'bg-gradient-to-r from-gray-50 to-white border border-gray-200 hover:shadow-md'
+                      }`}>
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <span className="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-bold">
+                                Q{index + 1}
+                              </span>
+                              {editingQuestionIndex === index && (
+                                <span className="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold animate-pulse flex items-center space-x-1">
+                                  <FiEdit className="w-3 h-3" />
+                                  <span>EDITING</span>
+                                </span>
+                              )}
+                              <span className={`px-3 py-1 rounded-lg text-xs font-medium ${
+                                q.type === 'mcq' ? 'bg-purple-100 text-purple-800' :
+                                q.type === 'true-false' ? 'bg-green-100 text-green-800' :
+                                'bg-orange-100 text-orange-800'
+                              }`}>
+                                {q.type === 'mcq' ? 'Multiple Choice' : 
+                                 q.type === 'true-false' ? 'True/False' : 'Short Answer'}
+                              </span>
+                              <span className="text-sm font-semibold text-blue-600">
+                                {q.marks} {q.marks === 1 ? 'mark' : 'marks'}
+                              </span>
+                            </div>
+                            <p className="text-gray-900 font-medium text-base leading-relaxed">{q.text}</p>
+                            {q.type === 'mcq' && q.options && (
+                              <div className="mt-3 ml-4 space-y-2">
+                                {q.options.map((opt, optIdx) => (
+                                  <div key={optIdx} className="flex items-center space-x-2 text-sm">
+                                    <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
+                                      q.correctAnswer === opt ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
+                                    }`}>
+                                      {String.fromCharCode(65 + optIdx)}
+                                    </span>
+                                    <span className={q.correctAnswer === opt ? 'text-gray-900 font-medium' : 'text-gray-600'}>
+                                      {opt}
+                                    </span>
+                                    {q.correctAnswer === opt && (
+                                      <FiCheckCircle className="w-4 h-4 text-green-500" />
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {q.type !== 'mcq' && (
+                              <div className="mt-3 flex items-center space-x-2 text-sm">
+                                <span className="text-gray-600">Correct Answer:</span>
+                                <span className="font-medium text-green-600">{q.correctAnswer}</span>
+                              </div>
+                            )}
+                            {q.explanation && (
+                              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <span className="text-xs font-semibold text-blue-800 uppercase">Explanation:</span>
+                                <p className="text-sm text-gray-700 mt-1">{q.explanation}</p>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2 ml-4">
+                            <button
+                              onClick={() => editQuestion(index)}
+                              className={`p-2 rounded-lg transition-colors ${
+                                editingQuestionIndex === index
+                                  ? 'bg-blue-600 text-white cursor-default'
+                                  : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
+                              }`}
+                              title={editingQuestionIndex === index ? 'Currently editing' : 'Edit question'}
+                              disabled={editingQuestionIndex === index}
+                            >
+                              <FiEdit className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => deleteQuestion(index)}
+                              className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete question"
+                            >
+                              <FiTrash2 className="w-5 h-5" />
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => deleteQuestion(index)}
-                          className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded"
-                        >
-                          <FiTrash2 className="w-5 h-5" />
-                        </button>
                       </div>
                     ))}
                   </div>
                 )}
 
-                {/* Add New Question */}
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Question</h3>
+                {/* Add/Edit Question Form */}
+                <div id="question-form" className={`border-2 rounded-lg p-6 transition-all ${
+                  editingQuestionIndex !== null 
+                    ? 'border-blue-500 bg-blue-50/50 shadow-lg' 
+                    : 'border-dashed border-gray-300'
+                }`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {editingQuestionIndex !== null ? (
+                        <span className="flex items-center space-x-2">
+                          <FiEdit className="w-5 h-5 text-blue-600" />
+                          <span>Editing Question {editingQuestionIndex + 1}</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center space-x-2">
+                          <FiPlus className="w-5 h-5 text-gray-600" />
+                          <span>Add New Question</span>
+                        </span>
+                      )}
+                    </h3>
+                    {editingQuestionIndex !== null && (
+                      <button
+                        onClick={cancelEdit}
+                        className="text-gray-600 hover:text-gray-800 px-3 py-1 rounded-lg hover:bg-white transition-colors text-sm font-medium flex items-center space-x-1"
+                      >
+                        <FiX className="w-4 h-4" />
+                        <span>Cancel Edit</span>
+                      </button>
+                    )}
+                  </div>
                   
                   <div className="space-y-4">
                     <div>
@@ -660,10 +869,23 @@ const CreateQuizPage = () => {
 
                     <button
                       onClick={addQuestion}
-                      className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center space-x-2"
+                      className={`w-full px-6 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 transition-colors ${
+                        editingQuestionIndex !== null
+                          ? 'bg-green-600 text-white hover:bg-green-700'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
                     >
-                      <FiPlus className="w-5 h-5" />
-                      <span>Add Question</span>
+                      {editingQuestionIndex !== null ? (
+                        <>
+                          <FiCheckCircle className="w-5 h-5" />
+                          <span>Update Question</span>
+                        </>
+                      ) : (
+                        <>
+                          <FiPlus className="w-5 h-5" />
+                          <span>Add Question</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -692,6 +914,9 @@ const CreateQuizPage = () => {
           </div>
         </div>
       </div>
+      
+      {/* Toast Notification */}
+      {toast && <Toast message={toast.message} type={toast.type} />}
     </div>
   )
 }

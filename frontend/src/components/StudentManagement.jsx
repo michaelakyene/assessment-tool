@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { FiSearch, FiMail, FiUser, FiBarChart2, FiCheckCircle, FiXCircle, FiEdit2 } from 'react-icons/fi'
+import { FiSearch, FiMail, FiUser, FiBarChart2, FiCheckCircle, FiXCircle, FiEdit2, FiAlertCircle } from 'react-icons/fi'
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRole, setFilterRole] = useState('all')
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     // Load students (replace with API call)
@@ -45,6 +46,13 @@ const StudentManagement = () => {
       setLoading(false)
     }, 500)
   }, [])
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [toast])
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = 
@@ -248,13 +256,13 @@ const StudentManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
-                        onClick={() => alert(`View details for ${student.name}`)}
+                        onClick={() => setToast({ message: `Viewing details for ${student.name}`, type: 'success' })}
                         className="text-blue-600 hover:text-blue-900 mr-3"
                       >
                         <FiBarChart2 className="inline" /> View
                       </button>
                       <button
-                        onClick={() => alert(`Send email to ${student.email}`)}
+                        onClick={() => setToast({ message: `Email compose window would open for ${student.email}`, type: 'success' })}
                         className="text-gray-600 hover:text-gray-900"
                       >
                         <FiMail className="inline" /> Email
@@ -267,6 +275,19 @@ const StudentManagement = () => {
           </table>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-20 right-4 z-50 animate-slideUp">
+          <div className={`${
+            toast.type === 'error' ? 'bg-red-500' : 
+            toast.type === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+          } text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 min-w-[300px]`}>
+            {toast.type === 'error' ? <FiAlertCircle className="w-5 h-5" /> : <FiCheckCircle className="w-5 h-5" />}
+            <span className="font-medium">{toast.message}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

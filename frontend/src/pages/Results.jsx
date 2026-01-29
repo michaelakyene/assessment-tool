@@ -1,97 +1,38 @@
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { FiArrowLeft, FiCheck, FiX, FiBarChart2, FiClock, FiAward, FiPercent } from 'react-icons/fi'
+import { FiArrowLeft, FiCheck, FiX, FiBarChart2, FiClock, FiAward, FiPercent, FiAlertCircle } from 'react-icons/fi'
 import { format } from 'date-fns'
+import axios from 'axios'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const Results = ({ user }) => {
   const { attemptId } = useParams()
   const navigate = useNavigate()
+  const [attempt, setAttempt] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  // Sample data - in real app, fetch from API
-  const attempt = {
-    id: attemptId,
-    quiz: {
-      title: 'Introduction to React',
-      showResults: true,
-      questions: [
-        {
-          id: 'q1',
-          text: 'What is React primarily used for?',
-          type: 'mcq',
-          options: [
-            'Backend development',
-            'Building user interfaces',
-            'Database management',
-            'Mobile app development (only)'
-          ],
-          correctAnswer: 'Building user interfaces',
-          marks: 2,
-          explanation: 'React is a JavaScript library for building user interfaces, particularly single-page applications.'
-        },
-        {
-          id: 'q2',
-          text: 'React components must return a single JSX element',
-          type: 'true_false',
-          correctAnswer: 'True',
-          marks: 1,
-          explanation: 'React components must return a single JSX element, which can wrap multiple elements.'
-        },
-        {
-          id: 'q3',
-          text: 'What does JSX stand for?',
-          type: 'short_answer',
-          correctAnswer: 'JavaScript XML',
-          marks: 2,
-          explanation: 'JSX stands for JavaScript XML. It allows writing HTML-like code in JavaScript.'
-        },
-        {
-          id: 'q4',
-          text: 'Which of these are React hooks? (Select all that apply)',
-          type: 'mcq',
-          options: [
-            'useState',
-            'useEffect',
-            'useContext',
-            'All of the above'
-          ],
-          correctAnswer: 'All of the above',
-          marks: 3,
-          explanation: 'All are React hooks. useState, useEffect, and useContext are commonly used hooks.'
+  useEffect(() => {
+    loadResults()
+  }, [attemptId])
+
+  const loadResults = async () => {
+    try {
+      setLoading(true)
+      const response = await axios.get(`${API_URL}/attempts/${attemptId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
-      ]
-    },
-    answers: [
-      {
-        questionId: 'q1',
-        response: 'Building user interfaces',
-        isCorrect: true,
-        marksObtained: 2
-      },
-      {
-        questionId: 'q2',
-        response: 'True',
-        isCorrect: true,
-        marksObtained: 1
-      },
-      {
-        questionId: 'q3',
-        response: 'JavaScript XML',
-        isCorrect: true,
-        marksObtained: 2
-      },
-      {
-        questionId: 'q4',
-        response: 'useState',
-        isCorrect: false,
-        marksObtained: 0
-      }
-    ],
-    score: 5,
-    totalMarks: 8,
-    percentage: 62.5,
-    status: 'completed',
-    startTime: new Date('2023-10-28T10:00:00').toISOString(),
-    endTime: new Date('2023-10-28T10:25:30').toISOString(),
-    timeTaken: 1530 // seconds
+      })
+      
+      setAttempt(response.data.attempt)
+    } catch (error) {
+      console.error('Failed to load results:', error)
+      setError(error.response?.data?.message || 'Failed to load results')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const getLetterGrade = (percentage) => {
@@ -109,8 +50,44 @@ const Results = ({ user }) => {
     return `${mins}m ${secs}s`
   }
 
-  const quiz = attempt.quiz
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600 mb-2"></div>
+          <p className="text-gray-600">Loading results...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-2xl mx-auto mt-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <FiAlertCircle className="w-6 h-6 text-red-600" />
+            <h3 className="text-lg font-semibold text-red-900">Error Loading Results</h3>
+          </div>
+          <p className="text-red-700 mb-4">{error}</p>
+          <button
+            onClick={() => navigate('/')}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!attempt) return null
+
+  const quiz = attempt.quiz || attempt.quizId
   const letterGrade = getLetterGrade(attempt.percentage)
+  const isPassed = attempt.percentage >= (quiz.passingScore || 50)
+  const correctAnswers = attempt.answers?.filter(a => a.isCorrect).length || 0
+  const totalQuestions = quiz.questions?.length || 0
 
   return (
     <div className="max-w-6xl mx-auto">
