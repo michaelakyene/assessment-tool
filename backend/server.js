@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const compression = require('compression');
+const cookieParser = require('cookie-parser');
 const http = require('http');
 require('dotenv').config();
 
@@ -29,33 +31,66 @@ const app = express();
 const server = http.createServer(app);
 const io = socketServer(server);
 
-// Middleware
+// Middleware - Performance & Security
 app.use(helmet());
+app.use(compression({ level: 6, threshold: 1000 }));
+
+// Enhanced CORS configuration with whitelist
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',') 
+  : [process.env.FRONTEND_URL || 'http://localhost:5173'];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Data sanitization
 app.use(sanitizeInput);
 
-// Rate limiting
+// Rate limiting - Global
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 1000
+  max: 1000,
+  standardHeaders: false
 });
 app.use('/api/', limiter);
 
-// Authentication rate limiting
+// Authentication rate limiting - Strict
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: 'Too many authentication attempts, please try again later'
+  message: 'Too many authentication attempts, please try again later',
+  standardHeaders: false
+});
+
+// Quiz attempts rate limiting - Prevent abuse
+const attemptLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  message: 'Too many attempts, please wait before trying again',
+  standardHeaders: false,
+  skip: (req) => req.method !== 'POST'
 });
 
 // Body parser
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Cookie parser - Required for refresh tokens
+app.use(cookieParser());
 
 // Static files (for uploads)
 app.use('/uploads', express.static('uploads'));
@@ -90,7 +125,7 @@ app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/quizzes', quizRoutes);
-app.use('/api/attempts', attemptRoutes);
+app.use('/api/attempts', attemptLimiter, attemptRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
 // Database connection
@@ -111,7 +146,7 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => { // Changed from app.listen to server.listen
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📚 API Docs: http://localhost:${PORT}/api-docs`);
 });

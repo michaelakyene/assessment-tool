@@ -13,21 +13,22 @@ const {
   duplicateQuiz
 } = require('../controllers/quizController');
 const { authMiddleware, roleMiddleware } = require('../middleware/authMiddleware');
+const { validateQuizCreate, validateMongoId } = require('../middleware/validateRequest');
 
 // Lecturer routes
-router.post('/', authMiddleware, roleMiddleware('lecturer'), createQuiz);
+router.post('/', authMiddleware, roleMiddleware('lecturer'), validateQuizCreate, createQuiz);
 router.get('/lecturer', authMiddleware, roleMiddleware('lecturer'), getLecturerQuizzes);
-router.get('/lecturer/:id', authMiddleware, roleMiddleware('lecturer'), getQuizById);
-router.put('/:id', authMiddleware, roleMiddleware('lecturer'), updateQuiz);
-router.delete('/:id', authMiddleware, roleMiddleware('lecturer'), deleteQuiz);
-router.patch('/:id/publish', authMiddleware, roleMiddleware('lecturer'), togglePublish);
-router.get('/:id/results', authMiddleware, roleMiddleware('lecturer'), getQuizResults);
-router.post('/:id/duplicate', authMiddleware, roleMiddleware('lecturer'), duplicateQuiz);
+router.get('/lecturer/:id', authMiddleware, roleMiddleware('lecturer'), validateMongoId, getQuizById);
+router.put('/:id', authMiddleware, roleMiddleware('lecturer'), validateMongoId, validateQuizCreate, updateQuiz);
+router.delete('/:id', authMiddleware, roleMiddleware('lecturer'), validateMongoId, deleteQuiz);
+router.patch('/:id/publish', authMiddleware, roleMiddleware('lecturer'), validateMongoId, togglePublish);
+router.get('/:id/results', authMiddleware, roleMiddleware('lecturer'), validateMongoId, getQuizResults);
+router.post('/:id/duplicate', authMiddleware, roleMiddleware('lecturer'), validateMongoId, duplicateQuiz);
 
 // Student routes
 router.get('/available', authMiddleware, getAvailableQuizzes);
-router.post('/:id/verify-password', authMiddleware, verifyQuizPassword);
-router.get('/:id', authMiddleware, getQuizById);
+router.post('/:id/verify-password', authMiddleware, validateMongoId, verifyQuizPassword);
+router.get('/:id', authMiddleware, validateMongoId, getQuizById);
 
 // Export router
 module.exports = router;

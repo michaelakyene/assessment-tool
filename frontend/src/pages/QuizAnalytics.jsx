@@ -210,13 +210,21 @@ const QuizAnalytics = () => {
                       <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center text-white font-bold shadow-sm">
                         {attempt.student?.name?.charAt(0) || 'S'}
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900">
                           {attempt.student?.name || 'Anonymous Student'}
                         </p>
-                        <p className="text-sm text-gray-600">
-                          Completed on {new Date(attempt.submittedAt).toLocaleDateString()}
-                        </p>
+                        <div className="flex items-center space-x-2 text-xs text-gray-600">
+                          <span className="font-medium">Index: {attempt.student?.indexNumber || 'N/A'}</span>
+                          <span>•</span>
+                          <span>{new Date(attempt.submittedAt).toLocaleDateString()}</span>
+                          {attempt.timeTaken && (
+                            <>
+                              <span>•</span>
+                              <span>{Math.floor(attempt.timeTaken / 60)}m {attempt.timeTaken % 60}s</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
@@ -232,7 +240,7 @@ const QuizAnalytics = () => {
                           {attempt.score}/{attempt.totalMarks} points
                         </p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                         attempt.percentage >= (quiz.passingScore || 50)
                           ? 'bg-green-100 text-green-700'
                           : 'bg-red-100 text-red-700'

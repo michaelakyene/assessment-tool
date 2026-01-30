@@ -70,4 +70,10 @@ attemptSchema.pre('save', function(next) {
   next();
 });
 
+// Indexes for performance optimization
+attemptSchema.index({ quiz: 1, user: 1 });
+attemptSchema.index({ quiz: 1, status: 1, createdAt: -1 });
+attemptSchema.index({ user: 1, createdAt: -1 });
+attemptSchema.index({ status: 1 });
+
 module.exports = mongoose.model('Attempt', attemptSchema);

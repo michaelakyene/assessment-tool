@@ -67,7 +67,7 @@ exports.getQuizAnalytics = async (req, res) => {
       quiz: quiz._id,
       status: { $in: ['completed', 'timeout'] }
     })
-      .populate('user', 'name')
+      .populate('user', 'name indexNumber email')
       .sort({ endTime: -1, createdAt: -1 })
       .lean();
 
@@ -105,12 +105,19 @@ exports.getQuizAnalytics = async (req, res) => {
       passRate,
       attempts: attempts.map(attempt => ({
         _id: attempt._id,
-        student: attempt.user,
+        student: {
+          _id: attempt.user?._id,
+          name: attempt.user?.name || 'Unknown Student',
+          indexNumber: attempt.user?.indexNumber || 'N/A',
+          email: attempt.user?.email
+        },
         score: attempt.score || 0,
         percentage: attempt.percentage || 0,
         totalMarks: attempt.totalMarks || 0,
         status: attempt.status,
-        submittedAt: attempt.endTime || attempt.createdAt
+        timeTaken: attempt.timeTaken,
+        submittedAt: attempt.endTime || attempt.createdAt,
+        attemptNumber: attempt.attemptNumber
       }))
     });
   } catch (error) {
