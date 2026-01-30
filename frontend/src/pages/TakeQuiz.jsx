@@ -131,12 +131,28 @@ const TakeQuiz = ({ user }) => {
   const [verifyingPassword, setVerifyingPassword] = useState(false)
   const [toast, setToast] = useState(null)
   const [attemptId, setAttemptId] = useState(null)
+  const [isAttemptStarting, setIsAttemptStarting] = useState(false)
   const [flaggedQuestions, setFlaggedQuestions] = useState(new Set())
   const [showSidebar, setShowSidebar] = useState(false)
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
 
   useEffect(() => {
     loadQuiz()
   }, [id])
+
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   // Auto-save answers to localStorage
   useEffect(() => {
@@ -146,12 +162,13 @@ const TakeQuiz = ({ user }) => {
         answers,
         flaggedQuestions: Array.from(flaggedQuestions),
         currentPageIndex,
+        attemptId,
         timestamp: Date.now()
       }))
     }
   }, [answers, flaggedQuestions, currentPageIndex, quiz, attemptId, id])
 
-  // Load saved progress from localStorage
+  // Load saved progress from localStorage - only restore non-attempt data
   useEffect(() => {
     if (quiz && attemptId) {
       const storageKey = `quiz_${id}_attempt_${attemptId}`
@@ -164,6 +181,7 @@ const TakeQuiz = ({ user }) => {
             setAnswers(data.answers || {})
             setFlaggedQuestions(new Set(data.flaggedQuestions || []))
             setCurrentPageIndex(data.currentPageIndex || 0)
+            // Don't restore attemptId - it's already set from loadQuiz
             setToast({
               message: 'Progress restored from previous session',
               type: 'success'
@@ -192,13 +210,51 @@ const TakeQuiz = ({ user }) => {
     })
   }
 
-  const handleReviewClick = () => {
+  const ensureAttemptId = async () => {
+    if (attemptId) return attemptId
+
+    try {
+      setIsAttemptStarting(true)
+      const attemptResponse = await axios.post(
+        `${API_URL}/attempts/start`,
+        { quizId: id },
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      )
+
+      const newAttemptId = attemptResponse?.data?.attempt?._id
+      if (!newAttemptId) {
+        throw new Error('Attempt ID not returned')
+      }
+
+      setAttemptId(newAttemptId)
+      return newAttemptId
+    } catch (err) {
+      console.error('Failed to start attempt:', err)
+      setError('Unable to initialize your attempt. Please refresh and try again.')
+      return null
+    } finally {
+      setIsAttemptStarting(false)
+    }
+  }
+
+  const handleReviewClick = async () => {
+    setError('')
+
+    const ensuredAttemptId = await ensureAttemptId()
+    if (!ensuredAttemptId) return
+
     navigate(`/quiz/${id}/review`, {
       state: {
         quiz,
         answers,
         flaggedQuestions,
-        onSubmit: handleSubmit
+        attemptId: ensuredAttemptId,
+        timeLeft,
+        quizId: id
       }
     })
   }
@@ -245,6 +301,7 @@ const TakeQuiz = ({ user }) => {
 
       // Start the attempt
       try {
+        setIsAttemptStarting(true)
         const attemptResponse = await axios.post(
           `${API_URL}/attempts/start`,
           { quizId: id },
@@ -254,10 +311,16 @@ const TakeQuiz = ({ user }) => {
             }
           }
         )
-        setAttemptId(attemptResponse.data.attempt._id)
+        const newAttemptId = attemptResponse?.data?.attempt?._id
+        if (!newAttemptId) {
+          throw new Error('Attempt ID not returned')
+        }
+        setAttemptId(newAttemptId)
       } catch (err) {
         console.error('Failed to start attempt:', err)
         setError('Failed to start quiz attempt. Please try again.')
+      } finally {
+        setIsAttemptStarting(false)
       }
       
     } catch (error) {
@@ -486,6 +549,10 @@ const TakeQuiz = ({ user }) => {
 
   const answeredCount = Object.values(answers).filter(answer => answer && answer !== '').length
   const totalQuestions = quiz.questions.length
+  const unansweredQuestions = quiz.questions.filter((q, idx) => {
+    const qId = q._id || idx
+    return !answers[qId] || answers[qId] === ''
+  })
   const questionsPerPage = 5
   const totalPages = Math.ceil(totalQuestions / questionsPerPage)
   const startIndex = currentPageIndex * questionsPerPage
@@ -723,16 +790,6 @@ const TakeQuiz = ({ user }) => {
             <FiList className="w-4 h-4" />
             <span>All Questions</span>
           </button>
-          <div className="flex gap-3 flex-1 sm:flex-initial">
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="flex-1 sm:flex-initial bg-blue-600 text-white px-4 sm:px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <FiCheckCircle className="w-5 h-5" />
-              <span>{submitting ? 'Submitting...' : 'Submit'}</span>
-            </button>
-          </div>
         </div>
       </div>
 
@@ -888,42 +945,42 @@ const TakeQuiz = ({ user }) => {
               Page {currentPageIndex + 1} of {totalPages}
             </div>
 
-            <button
-              onClick={() => {
-                if (currentPageIndex < totalPages - 1) {
+            {currentPageIndex < totalPages - 1 ? (
+              <button
+                onClick={() => {
                   setCurrentPageIndex(prev => prev + 1)
                   scrollToTop()
-                }
-              }}
-              disabled={currentPageIndex >= totalPages - 1}
-              className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="hidden sm:inline">Next Page</span>
-              <FiChevronRight className="w-5 h-5" />
-            </button>
+                }}
+                className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                <span className="hidden sm:inline">Next Page</span>
+                <FiChevronRight className="w-5 h-5" />
+              </button>
+            ) : (
+              <button
+                onClick={handleReviewClick}
+                disabled={isAttemptStarting}
+                className={`flex items-center justify-center space-x-2 px-4 sm:px-6 py-2.5 rounded-lg font-medium transition-colors min-w-[160px] ${
+                  isAttemptStarting
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+                title={isAttemptStarting ? 'Preparing your attempt...' : 'Review and submit your quiz'}
+              >
+                <FiCheckCircle className="w-5 h-5" />
+                <span>Review & Submit</span>
+              </button>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Error Display */}
-      {error && (
-        <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-3">
-          <FiAlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-          <p className="text-red-800">{error}</p>
-        </div>
-      )}
-
-      {/* Help Text */}
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="text-sm text-blue-900">
-          <div className="font-semibold mb-2">💡 Quick Tips:</div>
-          <ul className="space-y-1 list-disc list-inside text-blue-800">
-            <li>Use <kbd className="px-1.5 py-0.5 bg-white rounded text-xs font-mono">←</kbd> <kbd className="px-1.5 py-0.5 bg-white rounded text-xs font-mono">→</kbd> arrow keys to navigate</li>
-            <li>Press <kbd className="px-1.5 py-0.5 bg-white rounded text-xs font-mono">F</kbd> to flag a question for review</li>
-            <li>Click "Questions" or press <kbd className="px-1.5 py-0.5 bg-white rounded text-xs font-mono">Ctrl+R</kbd> to review all answers</li>
-            <li>Your progress is automatically saved</li>
-          </ul>
-        </div>
+        {/* Error Display */}
+        {error && (
+          <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-3">
+            <FiAlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <p className="text-red-800">{error}</p>
+          </div>
+        )}
       </div>
 
       {/* Password Modal */}

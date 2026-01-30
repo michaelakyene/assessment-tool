@@ -35,7 +35,7 @@ const StudentDashboard = ({ user }) => {
       
       // Fetch my attempts
       try {
-        const attemptsResponse = await axios.get(`${API_URL}/attempts/my-attempts`, {
+        const attemptsResponse = await axios.get(`${API_URL}/attempts/user`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }

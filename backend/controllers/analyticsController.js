@@ -63,38 +63,56 @@ exports.getQuizAnalytics = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    const analytics = await Attempt.aggregate([
-      { $match: { quiz: quiz._id } },
-      {
-        $group: {
-          _id: null,
-          totalAttempts: { $sum: 1 },
-          uniqueStudents: { $addToSet: '$user' },
-          averageScore: { $avg: '$score' },
-          averagePercentage: { $avg: '$percentage' },
-          completionRate: {
-            $avg: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
-          },
-          scoreDistribution: {
-            $push: {
-              score: '$score',
-              percentage: '$percentage'
-            }
-          }
-        }
-      },
-      {
-        $project: {
-          totalAttempts: 1,
-          uniqueStudents: { $size: '$uniqueStudents' },
-          averageScore: { $round: ['$averageScore', 2] },
-          averagePercentage: { $round: ['$averagePercentage', 2] },
-          completionRate: { $multiply: [{ $round: ['$completionRate', 2] }, 100] }
-        }
-      }
-    ]);
+    const attempts = await Attempt.find({
+      quiz: quiz._id,
+      status: { $in: ['completed', 'timeout'] }
+    })
+      .populate('user', 'name')
+      .sort({ endTime: -1, createdAt: -1 })
+      .lean();
 
-    res.json(analytics[0] || {});
+    const totalAttempts = attempts.length;
+    const uniqueStudents = new Set(
+      attempts
+        .map(attempt => attempt.user?._id?.toString())
+        .filter(Boolean)
+    ).size;
+
+    const averageScore = totalAttempts
+      ? attempts.reduce((sum, attempt) => sum + (attempt.score || 0), 0) / totalAttempts
+      : 0;
+
+    const averagePercentage = totalAttempts
+      ? attempts.reduce((sum, attempt) => sum + (attempt.percentage || 0), 0) / totalAttempts
+      : 0;
+
+    const completedAttempts = attempts.filter(attempt => attempt.status === 'completed');
+    const completionRate = totalAttempts
+      ? (completedAttempts.length / totalAttempts) * 100
+      : 0;
+
+    const passingScore = quiz.passingScore || 50;
+    const passRate = completedAttempts.length
+      ? (completedAttempts.filter(attempt => (attempt.percentage || 0) >= passingScore).length / completedAttempts.length) * 100
+      : 0;
+
+    res.json({
+      totalAttempts,
+      uniqueStudents,
+      averageScore,
+      averagePercentage,
+      completionRate,
+      passRate,
+      attempts: attempts.map(attempt => ({
+        _id: attempt._id,
+        student: attempt.user,
+        score: attempt.score || 0,
+        percentage: attempt.percentage || 0,
+        totalMarks: attempt.totalMarks || 0,
+        status: attempt.status,
+        submittedAt: attempt.endTime || attempt.createdAt
+      }))
+    });
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch quiz analytics', error: error.message });
   }

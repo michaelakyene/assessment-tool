@@ -88,6 +88,7 @@ const Results = ({ user }) => {
   const isPassed = attempt.percentage >= (quiz.passingScore || 50)
   const correctAnswers = attempt.answers?.filter(a => a.isCorrect).length || 0
   const totalQuestions = quiz.questions?.length || 0
+  const shouldShowResults = quiz.showResults !== false // Default to true if not specified
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -113,6 +114,17 @@ const Results = ({ user }) => {
             <div className="text-xs text-gray-500 mt-1">({user.role})</div>
           </div>
         </div>
+
+        {/* Show Results Not Available Message */}
+        {!shouldShowResults && (
+          <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 mb-8 flex items-center space-x-3">
+            <FiAlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <div>
+              <p className="font-medium text-amber-900">Results Not Available</p>
+              <p className="text-sm text-amber-800">The instructor has hidden detailed results for this quiz. Only your score is shown.</p>
+            </div>
+          </div>
+        )}
 
         {/* Score Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -183,7 +195,8 @@ const Results = ({ user }) => {
         </div>
       </div>
 
-      {/* Detailed Results */}
+      {/* Detailed Results - Only show if shouldShowResults */}
+      {shouldShowResults && (
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Detailed Results</h2>
         
@@ -314,6 +327,7 @@ const Results = ({ user }) => {
           })}
         </div>
       </div>
+      )}
 
       {/* Action Buttons */}
       <div className="flex justify-between items-center pt-8 border-t border-gray-200">

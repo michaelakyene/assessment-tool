@@ -66,22 +66,49 @@ exports.submitAttempt = async (req, res) => {
   try {
     const { attemptId, answers } = req.body;
 
+    // Validate input
+    if (!attemptId || !answers || !Array.isArray(answers)) {
+      return res.status(400).json({ 
+        message: 'Invalid request. Missing attemptId or answers.' 
+      });
+    }
+
     const attempt = await Attempt.findById(attemptId);
     if (!attempt) {
       return res.status(404).json({ message: 'Attempt not found' });
     }
 
     if (attempt.user.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Unauthorized' });
+      return res.status(403).json({ message: 'Unauthorized access to this attempt' });
+    }
+
+    // Double-submission prevention: If already submitted, return the result
+    if (attempt.status === 'completed' || attempt.status === 'timeout') {
+      return res.json({
+        message: 'Attempt already submitted',
+        attempt,
+        showResults: attempt.quiz.showResults || false
+      });
     }
 
     if (attempt.status !== 'in_progress') {
-      return res.status(400).json({ message: 'Attempt already submitted' });
+      return res.status(400).json({ 
+        message: `Cannot submit. Attempt status is ${attempt.status}` 
+      });
     }
 
-    const quiz = await Quiz.findById(attempt.quiz);
+    const quiz = await Quiz.findById(attempt.quiz).select(
+      'title questions maxAttempts showResults passingScore'
+    );
     if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found' });
+    }
+
+    // Validate answers array
+    if (answers.length === 0) {
+      return res.status(400).json({ 
+        message: 'No answers provided. Please answer at least one question.' 
+      });
     }
 
     // Calculate scores
@@ -89,34 +116,49 @@ exports.submitAttempt = async (req, res) => {
     let score = 0;
     const gradedAnswers = [];
 
-    quiz.questions.forEach((question, index) => {
-      totalMarks += question.marks;
+    quiz.questions.forEach((question) => {
+      totalMarks += question.marks || 0;
       
-      const userAnswer = answers.find(a => 
-        a.questionId.toString() === question._id.toString()
-      );
+      const userAnswer = answers.find(a => {
+        // Handle both string and ObjectId comparisons
+        const answerId = a.questionId.toString();
+        const questionId = question._id.toString();
+        return answerId === questionId;
+      });
 
-      if (userAnswer) {
+      if (userAnswer && userAnswer.response) {
         let isCorrect = false;
         let marksObtained = 0;
+        const response = String(userAnswer.response).trim();
 
         if (question.type === 'mcq' || question.type === 'true_false') {
-          isCorrect = userAnswer.response === question.correctAnswer;
-          marksObtained = isCorrect ? question.marks : 0;
+          isCorrect = response === String(question.correctAnswer).trim();
+          marksObtained = isCorrect ? (question.marks || 0) : 0;
         } else if (question.type === 'short_answer') {
-          // For short answer, compare case-insensitive and trimmed
-          isCorrect = userAnswer.response.trim().toLowerCase() === 
-                     question.correctAnswer.trim().toLowerCase();
-          marksObtained = isCorrect ? question.marks : 0;
+          // Case-insensitive, trimmed comparison
+          const correctAnswer = String(question.correctAnswer || '').trim().toLowerCase();
+          const studentAnswer = response.toLowerCase();
+          
+          // Exact match
+          isCorrect = studentAnswer === correctAnswer;
+          marksObtained = isCorrect ? (question.marks || 0) : 0;
         }
 
         score += marksObtained;
 
         gradedAnswers.push({
           questionId: question._id,
-          response: userAnswer.response,
+          response,
           isCorrect,
           marksObtained
+        });
+      } else {
+        // No answer provided for this question
+        gradedAnswers.push({
+          questionId: question._id,
+          response: '',
+          isCorrect: false,
+          marksObtained: 0
         });
       }
     });
@@ -125,7 +167,7 @@ exports.submitAttempt = async (req, res) => {
 
     // Update attempt
     attempt.answers = gradedAnswers;
-    attempt.endTime = Date.now();
+    attempt.endTime = new Date();
     attempt.totalMarks = totalMarks;
     attempt.score = score;
     attempt.percentage = percentage;
@@ -135,11 +177,22 @@ exports.submitAttempt = async (req, res) => {
 
     res.json({
       message: 'Attempt submitted successfully',
-      attempt,
-      showResults: quiz.showResults
+      attempt: {
+        _id: attempt._id,
+        score: attempt.score,
+        percentage: attempt.percentage,
+        totalMarks: attempt.totalMarks,
+        status: attempt.status,
+        endTime: attempt.endTime
+      },
+      showResults: quiz.showResults || false
     });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to submit attempt', error: error.message });
+    console.error('Submission error:', error);
+    res.status(500).json({ 
+      message: 'Failed to submit attempt. Please try again.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
