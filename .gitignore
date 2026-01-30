@@ -21,3 +21,6 @@ uploads/
 out/
 .cache/
 .env.*.local
+
+# Local Netlify folder
+.netlify
