@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { FiArrowLeft, FiUsers, FiClock, FiBarChart2, FiTrendingUp, FiCheckCircle, FiXCircle, FiAward } from 'react-icons/fi'
+import { FiArrowLeft, FiUsers, FiClock, FiBarChart2, FiTrendingUp, FiCheckCircle, FiXCircle, FiAward, FiRefreshCw } from 'react-icons/fi'
 import axios from 'axios'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
@@ -12,32 +12,64 @@ const QuizAnalytics = () => {
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [retrying, setRetrying] = useState(false)
 
   useEffect(() => {
     loadAnalytics()
   }, [id])
 
-  const loadAnalytics = async () => {
+  const loadAnalytics = async (retry = 0) => {
     try {
       setLoading(true)
+      setRetrying(retry > 0)
+      setError('')
       
-      // Fetch quiz details
-      const quizResponse = await axios.get(`${API_URL}/quizzes/${id}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      })
-      setQuiz(quizResponse.data.quiz)
+      // Create abort controller with 15 second timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000)
+      
+      try {
+        // Fetch quiz details with timeout
+        const quizResponse = await axios.get(`${API_URL}/quizzes/${id}`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+          signal: controller.signal,
+          timeout: 15000
+        })
+        setQuiz(quizResponse.data.quiz || quizResponse.data)
 
-      // Fetch analytics
-      const analyticsResponse = await axios.get(`${API_URL}/analytics/quiz/${id}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      })
-      setAnalytics(analyticsResponse.data)
+        // Fetch analytics with timeout
+        const analyticsResponse = await axios.get(`${API_URL}/analytics/quiz/${id}`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+          signal: controller.signal,
+          timeout: 15000
+        })
+        setAnalytics(analyticsResponse.data)
+        setError('')
+      } finally {
+        clearTimeout(timeoutId)
+      }
     } catch (error) {
       console.error('Failed to load analytics:', error)
-      setError(error.response?.data?.message || 'Failed to load analytics')
+      
+      if (error.code === 'ECONNABORTED' || error.message === 'Request timeout') {
+        // Timeout error - retry up to 2 times
+        if (retry < 2) {
+          console.log(`Retrying analytics load (attempt ${retry + 1})...`)
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retry + 1)))
+          return loadAnalytics(retry + 1)
+        }
+        setError('Request timeout - server is taking too long. Please try again or check back later.')
+      } else {
+        setError(error.response?.data?.message || error.message || 'Failed to load analytics')
+      }
     } finally {
       setLoading(false)
+      setRetrying(false)
     }
+  }
+
+  const handleRetry = () => {
+    loadAnalytics(0)
   }
 
   if (loading) {
@@ -64,7 +96,24 @@ const QuizAnalytics = () => {
           </button>
           <div className="bg-red-50 border border-red-200 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-red-900 mb-2">Error Loading Analytics</h3>
-            <p className="text-red-700">{error || 'Quiz not found'}</p>
+            <p className="text-red-700 mb-4">{error || 'Quiz not found'}</p>
+            <button
+              onClick={handleRetry}
+              disabled={loading || retrying}
+              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center space-x-2"
+            >
+              {retrying ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Retrying...</span>
+                </>
+              ) : (
+                <>
+                  <FiRefreshCw className="w-4 h-4" />
+                  <span>Try Again</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
