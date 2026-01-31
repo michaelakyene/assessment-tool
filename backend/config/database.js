@@ -5,14 +5,16 @@ const connectDB = async (retries = 5) => {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/assessment_db', {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      maxPoolSize: 10,
-      minPoolSize: 2,
-      serverSelectionTimeoutMS: 30000,
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 30000,
+      maxPoolSize: 5,
+      minPoolSize: 1,
+      serverSelectionTimeoutMS: 15000,
+      socketTimeoutMS: 20000,
+      connectTimeoutMS: 15000,
+      waitQueueTimeoutMS: 10000,
       retryWrites: true,
       retryReads: true,
-      family: 4 // Force IPv4
+      family: 4, // Force IPv4
+      heartbeatFrequencyMS: 10000
     });
     console.log('✅ MongoDB Connected Successfully');
     

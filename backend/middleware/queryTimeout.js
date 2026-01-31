@@ -5,7 +5,14 @@ module.exports = (req, res, next) => {
   const timeout = setTimeout(() => {
     console.warn(`⚠️ Query timeout: ${req.method} ${req.path}`);
     abortController.abort();
-  }, 20000); // 20 second timeout for DB queries
+    // Send early response before Heroku cuts us off
+    if (!res.headersSent) {
+      res.status(503).json({
+        message: 'Request timeout',
+        code: 'REQUEST_TIMEOUT'
+      });
+    }
+  }, 18000); // 18 second timeout for DB queries (Heroku has 30s limit)
   
   req.queryTimeout = timeout;
   req.abortSignal = abortController.signal;

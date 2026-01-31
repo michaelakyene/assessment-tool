@@ -123,7 +123,7 @@ exports.getQuizById = async (req, res) => {
     try {
       quiz = await Quiz.findById(quizId)
         .lean()
-        .maxTimeMS(8000)
+        .maxTimeMS(5000)
         .exec();
     } catch (mongoError) {
       console.error(`❌ MongoDB error for quiz ${quizId}:`, mongoError.message);
@@ -221,7 +221,7 @@ exports.togglePublish = async (req, res) => {
       { _id: req.params.id, createdBy: req.user._id },
       { $set: { isPublished: req.body.isPublished } },
       { new: true }
-    ).maxTimeMS(10000); // 10 second timeout
+    ).maxTimeMS(5000); // 5 second timeout
     
     console.log(`📦 Quiz found and updated:`, quiz ? 'Yes' : 'No');
 
