@@ -45,8 +45,8 @@ const validateRegister = [
     .optional()
     .trim()
     .isLength({ min: 3, max: 50 })
-    .matches(/^[A-Z0-9-]+$/)
-    .withMessage('Student ID must contain only uppercase letters, numbers and hyphens'),
+    .matches(/^[A-Z0-9/-]+$/)
+    .withMessage('Student ID must contain only uppercase letters, numbers, hyphens and forward slashes'),
   
   handleValidationErrors
 ];
