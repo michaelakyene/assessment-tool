@@ -49,18 +49,18 @@ exports.createQuiz = async (req, res) => {
       }
       if (q.type === 'multiple_choice' && (!q.options || q.options.length < 2)) {
         return res.status(400).json({ message: `Question ${i + 1}: Multiple choice requires at least 2 options` });
-          // Transform questions to match model schema
-          const transformedQuestions = questions.map(q => ({
-            text: q.questionText,
-            type: q.type === 'multiple_choice' ? 'mcq' : q.type,
-            options: q.options || [],
-            correctAnswer: q.correctAnswer,
-            marks: q.marks || 1,
-            explanation: q.explanation || ''
-          }));
-
       }
     }
+
+    // Transform questions to match model schema
+    const transformedQuestions = questions.map(q => ({
+      text: q.questionText,
+      type: q.type === 'multiple_choice' ? 'mcq' : q.type,
+      options: q.options || [],
+      correctAnswer: q.correctAnswer,
+      marks: q.marks || 1,
+      explanation: q.explanation || ''
+    }));
 
     const quiz = new Quiz({
       title,
