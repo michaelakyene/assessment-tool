@@ -16,6 +16,7 @@ const EnhancedLecturerDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
   const [confirmModal, setConfirmModal] = useState(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {

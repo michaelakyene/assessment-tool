@@ -17,7 +17,7 @@ const CreateQuizPage = () => {
     title: '',
     description: '',
     duration: 30,
-    maxAttempts: 3,
+    maxAttempts: 1,
     passingScore: 50,
     scheduledPublish: '',
     deadline: '',
@@ -36,7 +36,7 @@ const CreateQuizPage = () => {
     text: '',
     options: ['', '', '', ''],
     correctAnswer: '',
-    marks: 10,
+    marks: 1,
     explanation: ''
   })
 
@@ -145,7 +145,7 @@ const CreateQuizPage = () => {
       text: '',
       options: ['', '', '', ''],
       correctAnswer: '',
-      marks: 10,
+      marks: 1,
       explanation: ''
     })
   }
@@ -188,7 +188,7 @@ const CreateQuizPage = () => {
       text: '',
       options: ['', '', '', ''],
       correctAnswer: '',
-      marks: 10,
+      marks: 1,
       explanation: ''
     })
     setToast({ message: 'Edit cancelled', type: 'warning' })
@@ -202,7 +202,7 @@ const CreateQuizPage = () => {
         text: '',
         options: ['', '', '', ''],
         correctAnswer: '',
-        marks: 10,
+        marks: 1,
         explanation: ''
       })
     }
