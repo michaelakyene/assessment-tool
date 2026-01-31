@@ -178,8 +178,9 @@ const Login = ({ login }) => {
                         value={formData.studentId}
                         onChange={handleChange}
                         className="block w-full px-3 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 text-sm sm:text-base"
-                        placeholder="S123456"
+                        placeholder="CS/2023/001"
                       />
+                      <p className="mt-1 text-xs text-gray-500">Use uppercase letters, numbers, hyphens (-) and forward slashes (/)</p>
                     </div>
                   )}
                 </>
@@ -231,6 +232,9 @@ const Login = ({ login }) => {
                     {showPassword ? <FiEyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <FiEye className="h-4 w-4 sm:h-5 sm:w-5" />}
                   </button>
                 </div>
+                {!isLogin && (
+                  <p className="mt-1 text-xs text-gray-500">Min 8 characters with uppercase, lowercase, number and special character (@$!%*?&)</p>
+                )}
                 
                 {!isLogin && formData.password && (
                   <div className="mt-2">
