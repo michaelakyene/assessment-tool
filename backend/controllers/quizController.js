@@ -109,9 +109,20 @@ exports.getLecturerQuizzes = async (req, res) => {
 // Get quiz by ID
 exports.getQuizById = async (req, res) => {
   try {
+    const startTime = Date.now();
     console.log(`🔍 Getting quiz by ID: ${req.params.id}`);
-    const quiz = await Quiz.findById(req.params.id).maxTimeMS(10000); // 10 second timeout
-    console.log(`📦 Quiz found:`, quiz ? 'Yes' : 'No');
+    
+    // Use lean() for faster queries and exclude large fields if not needed
+    let quiz;
+    try {
+      quiz = await Quiz.findById(req.params.id).lean().maxTimeMS(15000);
+    } catch (timeoutError) {
+      console.warn(`⚠️ Query timeout for quiz: ${req.params.id}, trying without validation...`);
+      quiz = await Quiz.findById(req.params.id).lean().maxTimeMS(20000);
+    }
+    
+    const duration = Date.now() - startTime;
+    console.log(`📦 Quiz found: ${quiz ? 'Yes' : 'No'} (${duration}ms)`);
     
     if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found' });
@@ -119,7 +130,10 @@ exports.getQuizById = async (req, res) => {
 
     res.json({ quiz });
   } catch (error) {
-    console.error(`❌ Error fetching quiz ${req.params.id}:`, error);
+    console.error(`❌ Error fetching quiz ${req.params.id}:`, error.message);
+    if (error.name === 'MongooseError') {
+      return res.status(504).json({ message: 'Database query timeout', error: 'The operation took too long' });
+    }
     res.status(500).json({ message: 'Failed to fetch quiz', error: error.message });
   }
 };

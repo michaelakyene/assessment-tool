@@ -110,4 +110,9 @@ quizSchema.pre('save', function(next) {
   next();
 });
 
+// Add indexes for better query performance
+quizSchema.index({ createdBy: 1 });
+quizSchema.index({ isPublished: 1 });
+quizSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('Quiz', quizSchema);
