@@ -62,4 +62,12 @@ async function seedTestAccounts() {
   }
 }
 
-seedTestAccounts();
+// DISABLED FOR PRODUCTION - Auto-seeding test accounts disabled
+// seedTestAccounts();
+
+// To clear test data manually, run in MongoDB Atlas console:
+// db.users.deleteMany({ email: { $in: ['john@example.com', 'jane@example.com', ...] } })
+// db.quizzes.deleteMany({})
+// db.attempts.deleteMany({})
+
+module.exports = seedTestAccounts;
