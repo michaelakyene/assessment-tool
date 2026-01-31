@@ -42,7 +42,7 @@ const validateRegister = [
     .withMessage('Role must be either student or lecturer'),
   
   body('studentId')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ min: 3, max: 50 })
     .matches(/^[A-Z0-9/-]+$/)
