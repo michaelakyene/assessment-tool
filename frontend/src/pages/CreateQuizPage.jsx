@@ -32,8 +32,8 @@ const CreateQuizPage = () => {
   })
 
   const [currentQuestion, setCurrentQuestion] = useState({
-    type: 'mcq',
-    text: '',
+    type: 'multiple_choice',
+    questionText: '',
     options: ['', '', '', ''],
     correctAnswer: '',
     marks: 1,
@@ -106,12 +106,12 @@ const CreateQuizPage = () => {
   }
 
   const addQuestion = () => {
-    if (!currentQuestion.text.trim()) {
+    if (!currentQuestion.questionText.trim()) {
       setToast({ message: 'Please enter question text', type: 'warning' })
       return
     }
 
-    if (currentQuestion.type === 'mcq' && currentQuestion.options.some(opt => !opt.trim())) {
+    if (currentQuestion.type === 'multiple_choice' && currentQuestion.options.some(opt => !opt.trim())) {
       setToast({ message: 'Please fill all options', type: 'warning' })
       return
     }
@@ -141,8 +141,8 @@ const CreateQuizPage = () => {
     }
 
     setCurrentQuestion({
-      type: 'mcq',
-      text: '',
+      type: 'multiple_choice',
+      questionText: '',
       options: ['', '', '', ''],
       correctAnswer: '',
       marks: 1,
@@ -184,8 +184,8 @@ const CreateQuizPage = () => {
   const cancelEdit = () => {
     setEditingQuestionIndex(null)
     setCurrentQuestion({
-      type: 'mcq',
-      text: '',
+      type: 'multiple_choice',
+      questionText: '',
       options: ['', '', '', ''],
       correctAnswer: '',
       marks: 1,
@@ -198,8 +198,8 @@ const CreateQuizPage = () => {
     if (editingQuestionIndex === index) {
       setEditingQuestionIndex(null)
       setCurrentQuestion({
-        type: 'mcq',
-        text: '',
+        type: 'multiple_choice',
+        questionText: '',
         options: ['', '', '', ''],
         correctAnswer: '',
         marks: 1,
@@ -235,7 +235,7 @@ const CreateQuizPage = () => {
     // Validate all questions
     for (let i = 0; i < formData.questions.length; i++) {
       const q = formData.questions[i]
-      if (!q.text || !q.text.trim()) {
+      if (!q.questionText || !q.questionText.trim()) {
         setToast({ message: `Question ${i + 1}: Question text is required`, type: 'warning' })
         setActiveTab('questions')
         return
@@ -250,7 +250,7 @@ const CreateQuizPage = () => {
         setActiveTab('questions')
         return
       }
-      if (q.type === 'mcq' && (!q.options || q.options.filter(o => o.trim()).length < 2)) {
+      if (q.type === 'multiple_choice' && (!q.options || q.options.filter(o => o.trim()).length < 2)) {
         setToast({ message: `Question ${i + 1}: MCQ requires at least 2 options`, type: 'warning' })
         setActiveTab('questions')
         return
@@ -613,19 +613,19 @@ const CreateQuizPage = () => {
                                 </span>
                               )}
                               <span className={`px-3 py-1 rounded-lg text-xs font-medium ${
-                                q.type === 'mcq' ? 'bg-purple-100 text-purple-800' :
-                                q.type === 'true-false' ? 'bg-green-100 text-green-800' :
+                                q.type === 'multiple_choice' ? 'bg-purple-100 text-purple-800' :
+                                q.type === 'true_false' ? 'bg-green-100 text-green-800' :
                                 'bg-orange-100 text-orange-800'
                               }`}>
-                                {q.type === 'mcq' ? 'Multiple Choice' : 
-                                 q.type === 'true-false' ? 'True/False' : 'Short Answer'}
+                                {q.type === 'multiple_choice' ? 'Multiple Choice' : 
+                                 q.type === 'true_false' ? 'True/False' : 'Short Answer'}
                               </span>
                               <span className="text-sm font-semibold text-blue-600">
                                 {q.marks} {q.marks === 1 ? 'mark' : 'marks'}
                               </span>
                             </div>
-                            <p className="text-gray-900 font-medium text-base leading-relaxed">{q.text}</p>
-                            {q.type === 'mcq' && q.options && (
+                            <p className="text-gray-900 font-medium text-base leading-relaxed">{q.questionText}</p>
+                            {q.type === 'multiple_choice' && q.options && (
                               <div className="mt-3 ml-4 space-y-2">
                                 {q.options.map((opt, optIdx) => (
                                   <div key={optIdx} className="flex items-center space-x-2 text-sm">
@@ -726,9 +726,9 @@ const CreateQuizPage = () => {
                         onChange={handleQuestionChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        <option value="mcq">Multiple Choice</option>
-                        <option value="true-false">True/False</option>
-                        <option value="short-answer">Short Answer</option>
+                        <option value="multiple_choice">Multiple Choice</option>
+                        <option value="true_false">True/False</option>
+                        <option value="short_answer">Short Answer</option>
                       </select>
                     </div>
 
@@ -737,8 +737,8 @@ const CreateQuizPage = () => {
                         Question Text *
                       </label>
                       <textarea
-                        name="text"
-                        value={currentQuestion.text}
+                        name="questionText"
+                        value={currentQuestion.questionText}
                         onChange={handleQuestionChange}
                         rows="3"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -746,7 +746,7 @@ const CreateQuizPage = () => {
                       />
                     </div>
 
-                    {currentQuestion.type === 'mcq' && (
+                    {currentQuestion.type === 'multiple_choice' && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Options
