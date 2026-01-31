@@ -31,6 +31,9 @@ const app = express();
 const server = http.createServer(app);
 const io = socketServer(server);
 
+// Trust proxy - Required for Heroku
+app.set('trust proxy', 1);
+
 // Middleware - Performance & Security
 app.use(helmet());
 app.use(compression({ level: 6, threshold: 1000 }));
