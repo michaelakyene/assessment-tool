@@ -10,6 +10,7 @@ require('dotenv').config();
 
 const validateEnv = require('./config/validateEnv');
 const sanitizeInput = require('./middleware/sanitizeInput');
+const queryTimeout = require('./middleware/queryTimeout');
 
 const authRoutes = require('./routes/authRoutes');
 const quizRoutes = require('./routes/quizRoutes');
@@ -62,6 +63,27 @@ app.use(cors({
 
 // Data sanitization
 app.use(sanitizeInput);
+
+// Request timeout middleware - Prevent Heroku H12 errors
+app.use((req, res, next) => {
+  // Set a 25-second timeout (leave 5 seconds for response)
+  const timeout = setTimeout(() => {
+    if (!res.headersSent) {
+      console.warn(`⏱️ Request timeout: ${req.method} ${req.path}`);
+      res.status(503).json({ 
+        message: 'Request timeout - server took too long to respond',
+        code: 'REQUEST_TIMEOUT'
+      });
+    }
+  }, 25000);
+  
+  res.on('finish', () => clearTimeout(timeout));
+  res.on('close', () => clearTimeout(timeout));
+  next();
+});
+
+// Query timeout middleware
+app.use(queryTimeout);
 
 // Rate limiting - Global
 const limiter = rateLimit({
