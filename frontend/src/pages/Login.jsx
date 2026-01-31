@@ -178,7 +178,7 @@ const Login = ({ login }) => {
                         value={formData.studentId}
                         onChange={handleChange}
                         className="block w-full px-3 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 text-sm sm:text-base"
-                        placeholder="CS/2023/001"
+                        placeholder="ET/ICT/23/0001"
                       />
                       <p className="mt-1 text-xs text-gray-500">Use uppercase letters, numbers, hyphens (-) and forward slashes (/)</p>
                     </div>
