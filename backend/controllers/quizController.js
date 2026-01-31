@@ -109,7 +109,9 @@ exports.getLecturerQuizzes = async (req, res) => {
 // Get quiz by ID
 exports.getQuizById = async (req, res) => {
   try {
-    const quiz = await Quiz.findById(req.params.id);
+    console.log(`🔍 Getting quiz by ID: ${req.params.id}`);
+    const quiz = await Quiz.findById(req.params.id).maxTimeMS(10000); // 10 second timeout
+    console.log(`📦 Quiz found:`, quiz ? 'Yes' : 'No');
     
     if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found' });
@@ -117,6 +119,7 @@ exports.getQuizById = async (req, res) => {
 
     res.json({ quiz });
   } catch (error) {
+    console.error(`❌ Error fetching quiz ${req.params.id}:`, error);
     res.status(500).json({ message: 'Failed to fetch quiz', error: error.message });
   }
 };
@@ -167,11 +170,16 @@ exports.deleteQuiz = async (req, res) => {
 // Publish/unpublish quiz
 exports.togglePublish = async (req, res) => {
   try {
+    console.log(`🔄 Toggling publish for quiz: ${req.params.id}`);
+    console.log(`📄 Request body:`, req.body);
+    
     const quiz = await Quiz.findOneAndUpdate(
       { _id: req.params.id, createdBy: req.user._id },
       { $set: { isPublished: req.body.isPublished } },
       { new: true }
-    );
+    ).maxTimeMS(10000); // 10 second timeout
+    
+    console.log(`📦 Quiz found and updated:`, quiz ? 'Yes' : 'No');
 
     if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found or unauthorized' });
@@ -182,6 +190,7 @@ exports.togglePublish = async (req, res) => {
       quiz
     });
   } catch (error) {
+    console.error(`❌ Error toggling publish for quiz ${req.params.id}:`, error);
     res.status(500).json({ message: 'Failed to update quiz', error: error.message });
   }
 };
