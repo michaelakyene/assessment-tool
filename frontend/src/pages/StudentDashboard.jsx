@@ -23,12 +23,19 @@ const StudentDashboard = ({ user }) => {
       setLoading(true)
       setError('')
       
+      console.log('🔄 Loading student dashboard data...')
+      console.log('📍 API URL:', API_URL)
+      console.log('🔑 Token exists:', !!localStorage.getItem('token'))
+      console.log('👤 User:', user)
+      
       // Fetch available quizzes
       const quizzesResponse = await axios.get(`${API_URL}/quizzes/available`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       })
+      
+      console.log('✅ Quizzes loaded:', quizzesResponse.data.quizzes?.length || 0)
       
       // Set quizzes (already filtered as published on backend)
       setQuizzes(quizzesResponse.data.quizzes || [])
@@ -40,18 +47,22 @@ const StudentDashboard = ({ user }) => {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         })
+        console.log('✅ Attempts loaded:', attemptsResponse.data.attempts?.length || 0)
         setAttempts(attemptsResponse.data.attempts || [])
       } catch (attemptError) {
-        console.log('No attempts yet or error fetching attempts:', attemptError)
+        console.log('⚠️ No attempts yet or error fetching attempts:', attemptError.message)
         setAttempts([])
       }
       
+      console.log('✅ Dashboard data loaded successfully')
+      
     } catch (error) {
-      console.error('Failed to load dashboard:', error)
+      console.error('❌ Failed to load dashboard:', error)
       console.error('Error details:', {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        url: error.config?.url
       })
       setError(error.response?.data?.message || error.message || 'Failed to load dashboard')
     } finally {

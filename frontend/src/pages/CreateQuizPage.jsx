@@ -57,7 +57,7 @@ const CreateQuizPage = () => {
       })
     } catch (error) {
       setToast({ message: 'Failed to load quiz: ' + error.message, type: 'error' })
-      setTimeout(() => navigate('/lecturer-dashboard'), 2000)
+      setTimeout(() => navigate('/'), 2000)
     } finally {
       setLoading(false)
     }

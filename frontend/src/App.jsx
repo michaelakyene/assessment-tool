@@ -188,6 +188,10 @@ function App() {
               path="/results/:attemptId" 
               element={user ? <Results user={user} /> : <Navigate to="/login" />} 
             />
+            <Route 
+              path="*" 
+              element={<Navigate to={user ? "/" : "/login"} replace />} 
+            />
           </Routes>
         </main>
       
