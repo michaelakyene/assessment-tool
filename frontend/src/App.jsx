@@ -6,14 +6,13 @@ import CreateQuizPage from './pages/CreateQuizPage'
 import StudentDashboard from './pages/StudentDashboard'
 import TakeQuiz from './pages/TakeQuiz'
 import ReviewQuiz from './pages/ReviewQuiz'
-import Results from './pages/Results'
+import Results from './pages/REsults'
 import Profile from './pages/Profile'
 import QuizAnalytics from './pages/QuizAnalytics'
 import Navbar from './components/Navbar'
 import ErrorBoundary from './components/ErrorBoundary'
 import useAuthStore from './store/useAuthStore'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import api from './services/api'
 
 function App() {
   const { user, logout, setUser } = useAuthStore()
@@ -61,6 +60,16 @@ function App() {
     setUser(userData)
   }
 
+  const handleLogout = async () => {
+    try {
+      await api.post('/auth/logout')
+    } catch (error) {
+      console.warn('Logout request failed:', error)
+    } finally {
+      logout()
+    }
+  }
+
   const dismissOnboarding = () => {
     if (!onboardingRole) {
       setShowOnboarding(false)
@@ -85,7 +94,7 @@ function App() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">
-        {user && <Navbar user={user} logout={logout} />}
+        {user && <Navbar user={user} logout={handleLogout} />}
         {user && showOnboarding && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
             <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">

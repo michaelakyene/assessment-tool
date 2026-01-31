@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
-import axios from 'axios'
+import api from '../services/api'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { FiCheckCircle, FiAlertCircle, FiList, FiChevronRight, FiChevronLeft, FiFlag, FiArrowLeft, FiClock } from 'react-icons/fi'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const ReviewQuiz = () => {
   const location = useLocation()
@@ -69,19 +67,10 @@ const ReviewQuiz = () => {
       }
 
       setSubmitting(true);
-      const response = await axios.post(
-        `${API_URL}/attempts/submit`,
-        {
-          attemptId: attemptId,
-          answers: answersArray
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
-      );
+      await api.post('/attempts/submit', {
+        attemptId: attemptId,
+        answers: answersArray
+      });
 
       // Clear saved progress
       if (quizId) {
@@ -94,7 +83,7 @@ const ReviewQuiz = () => {
       navigate(`/results/${attemptId}`);
     } catch (err) {
       console.error('Submit error:', err)
-      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to submit quiz. Please try again.'
+      const errorMsg = err?.message || err?.error || err || 'Failed to submit quiz. Please try again.'
       setError(errorMsg)
       setSubmitting(false)
     }

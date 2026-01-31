@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { FiArrowLeft, FiCheckCircle, FiClock, FiAlertCircle, FiX, FiEye, FiEyeOff, FiChevronLeft, FiChevronRight, FiFlag, FiMenu, FiList } from 'react-icons/fi'
-import axios from 'axios'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import api from '../services/api'
 
 const PasswordModal = ({ isOpen, onSubmit, onCancel, loading }) => {
   const [password, setPassword] = useState('')
@@ -135,6 +133,7 @@ const TakeQuiz = ({ user }) => {
   const [flaggedQuestions, setFlaggedQuestions] = useState(new Set())
   const [showSidebar, setShowSidebar] = useState(false)
   const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [quizAccessToken, setQuizAccessToken] = useState(null)
 
   useEffect(() => {
     loadQuiz()
@@ -215,17 +214,18 @@ const TakeQuiz = ({ user }) => {
 
     try {
       setIsAttemptStarting(true)
-      const attemptResponse = await axios.post(
-        `${API_URL}/attempts/start`,
+      const accessToken = quizAccessToken || localStorage.getItem(`quiz_access_${id}`)
+      const attemptResponse = await api.post(
+        '/attempts/start',
         { quizId: id },
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            ...(accessToken ? { 'X-Quiz-Access-Token': accessToken } : {})
           }
         }
       )
 
-      const newAttemptId = attemptResponse?.data?.attempt?._id
+      const newAttemptId = attemptResponse?.attempt?._id
       if (!newAttemptId) {
         throw new Error('Attempt ID not returned')
       }
@@ -262,14 +262,18 @@ const TakeQuiz = ({ user }) => {
   const loadQuiz = async () => {
     try {
       setLoading(true)
-      const response = await axios.get(`${API_URL}/quizzes/${id}`, {
+      const storedQuizAccessToken = localStorage.getItem(`quiz_access_${id}`)
+      if (storedQuizAccessToken) {
+        setQuizAccessToken(storedQuizAccessToken)
+      }
+      const response = await api.get(`/quizzes/${id}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          ...(storedQuizAccessToken ? { 'X-Quiz-Access-Token': storedQuizAccessToken } : {})
         }
       })
       
       // Extract quiz data from response
-      const quizData = response.data.quiz || response.data
+      const quizData = response.quiz || response
       
       if (!quizData) {
         setError('Quiz not found')
@@ -277,7 +281,7 @@ const TakeQuiz = ({ user }) => {
       }
       
       // Check if quiz requires password
-      if (quizData.hasPassword) {
+      if (quizData.hasPassword && !storedQuizAccessToken) {
         setShowPasswordModal(true)
         setLoading(false)
         return
@@ -300,32 +304,16 @@ const TakeQuiz = ({ user }) => {
       setAnswers(initialAnswers)
 
       // Start the attempt
-      try {
-        setIsAttemptStarting(true)
-        const attemptResponse = await axios.post(
-          `${API_URL}/attempts/start`,
-          { quizId: id },
-          {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          }
-        )
-        const newAttemptId = attemptResponse?.data?.attempt?._id
-        if (!newAttemptId) {
-          throw new Error('Attempt ID not returned')
-        }
-        setAttemptId(newAttemptId)
-      } catch (err) {
-        console.error('Failed to start attempt:', err)
-        setError('Failed to start quiz attempt. Please try again.')
-      } finally {
-        setIsAttemptStarting(false)
-      }
+      await ensureAttemptId()
       
     } catch (error) {
       console.error('Failed to load quiz:', error)
-      setError(error.response?.data?.message || error.message || 'Failed to load quiz')
+      if (error?.requiresPassword) {
+        setShowPasswordModal(true)
+        setError('')
+      } else {
+        setError(error?.message || error?.error || error || 'Failed to load quiz')
+      }
     } finally {
       setLoading(false)
     }
@@ -334,17 +322,12 @@ const TakeQuiz = ({ user }) => {
   const handlePasswordSubmit = async (password) => {
     try {
       setVerifyingPassword(true)
-      const response = await axios.post(
-        `${API_URL}/quizzes/${id}/verify-password`,
-        { password },
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        }
+      const response = await api.post(
+        `/quizzes/${id}/verify-password`,
+        { password }
       )
       
-      if (!response.data.success) {
+      if (!response.success) {
         setToast({
           message: 'Incorrect password. Please try again.',
           type: 'error'
@@ -352,14 +335,19 @@ const TakeQuiz = ({ user }) => {
         return
       }
 
+      if (response.accessToken) {
+        setQuizAccessToken(response.accessToken)
+        localStorage.setItem(`quiz_access_${id}`, response.accessToken)
+      }
+
       // Password verified, now load the quiz
-      const quizResponse = await axios.get(`${API_URL}/quizzes/${id}`, {
+      const quizResponse = await api.get(`/quizzes/${id}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          ...(response.accessToken ? { 'X-Quiz-Access-Token': response.accessToken } : {})
         }
       })
 
-      const quizData = quizResponse.data.quiz || quizResponse.data
+      const quizData = quizResponse.quiz || quizResponse
       
       if (!quizData.questions || !Array.isArray(quizData.questions)) {
         setError('Quiz has no questions')
@@ -375,6 +363,8 @@ const TakeQuiz = ({ user }) => {
       })
       setAnswers(initialAnswers)
       setShowPasswordModal(false)
+
+      await ensureAttemptId()
 
     } catch (err) {
       console.error('Password verification error:', err)
@@ -457,17 +447,11 @@ const TakeQuiz = ({ user }) => {
         answeredCount: answersArray.filter(a => a.response).length
       })
 
-      const response = await axios.post(
-        `${API_URL}/attempts/submit`,
+      const response = await api.post(
+        '/attempts/submit',
         { 
           attemptId: attemptId,
           answers: answersArray
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
         }
       )
 
@@ -483,14 +467,9 @@ const TakeQuiz = ({ user }) => {
       navigate(`/results/${attemptId}`)
       
     } catch (error) {
-      console.error('Submission error:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data,
-        fullError: error
-      })
+      console.error('Submission error:', error)
       
-      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to submit quiz. Please try again.'
+      const errorMsg = error?.message || error?.error || error || 'Failed to submit quiz. Please try again.'
       
       setToast({
         message: errorMsg,

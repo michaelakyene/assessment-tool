@@ -1,5 +1,41 @@
 const Attempt = require('../models/Attempt');
 const Quiz = require('../models/Quiz');
+const jwt = require('jsonwebtoken');
+
+const isQuizAccessAllowed = (req, quizId, userId) => {
+  const token = req.header('X-Quiz-Access-Token');
+  if (!token || !process.env.JWT_SECRET) return false;
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.type !== 'quiz_access') return false;
+    if (decoded.quizId !== String(quizId)) return false;
+    if (decoded.userId !== String(userId)) return false;
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
+const sanitizeQuizForAttempt = (quiz, options = {}) => {
+  const quizObj = quiz.toObject ? quiz.toObject() : { ...quiz };
+
+  if (quizObj.password) {
+    delete quizObj.password;
+  }
+
+  if (Array.isArray(quizObj.questions)) {
+    quizObj.questions = quizObj.questions.map(q => {
+      const questionObj = q.toObject ? q.toObject() : { ...q };
+      if (!options.includeCorrectAnswers) {
+        delete questionObj.correctAnswer;
+      }
+      return questionObj;
+    });
+  }
+
+  return quizObj;
+};
 
 // Start a new attempt
 exports.startAttempt = async (req, res) => {
@@ -13,6 +49,21 @@ exports.startAttempt = async (req, res) => {
 
     if (!quiz.isPublished) {
       return res.status(403).json({ message: 'Quiz is not available' });
+    }
+
+    const now = new Date();
+    if (quiz.scheduledPublish && now < new Date(quiz.scheduledPublish)) {
+      return res.status(403).json({ message: 'Quiz is not yet available' });
+    }
+    if (quiz.deadline && now > new Date(quiz.deadline)) {
+      return res.status(403).json({ message: 'Quiz deadline has passed' });
+    }
+
+    if (quiz.hasPassword && !isQuizAccessAllowed(req, quiz._id, req.user._id)) {
+      return res.status(403).json({
+        message: 'Password required to access this quiz',
+        requiresPassword: true
+      });
     }
 
     // Check attempt limit
@@ -36,7 +87,7 @@ exports.startAttempt = async (req, res) => {
       return res.json({
         message: 'Resuming existing attempt',
         attempt: existingAttempt,
-        quiz
+        quiz: sanitizeQuizForAttempt(quiz)
       });
     }
 
@@ -54,7 +105,7 @@ exports.startAttempt = async (req, res) => {
     res.json({
       message: 'Attempt started successfully',
       attempt,
-      quiz
+      quiz: sanitizeQuizForAttempt(quiz)
     });
   } catch (error) {
     res.status(500).json({ message: 'Failed to start attempt', error: error.message });
@@ -82,12 +133,20 @@ exports.submitAttempt = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized access to this attempt' });
     }
 
+    const quiz = await Quiz.findById(attempt.quiz).select(
+      'title questions maxAttempts showResults passingScore allowReview showCorrectAnswers duration'
+    );
+    if (!quiz) {
+      return res.status(404).json({ message: 'Quiz not found' });
+    }
+
     // Double-submission prevention: If already submitted, return the result
     if (attempt.status === 'completed' || attempt.status === 'timeout') {
       return res.json({
         message: 'Attempt already submitted',
         attempt,
-        showResults: attempt.quiz.showResults || false
+        allowReview: quiz.allowReview ?? true,
+        showCorrectAnswers: quiz.showCorrectAnswers || false
       });
     }
 
@@ -97,11 +156,24 @@ exports.submitAttempt = async (req, res) => {
       });
     }
 
-    const quiz = await Quiz.findById(attempt.quiz).select(
-      'title questions maxAttempts showResults passingScore'
-    );
-    if (!quiz) {
-      return res.status(404).json({ message: 'Quiz not found' });
+    const timeLimitMs = (quiz.duration || 0) * 60 * 1000;
+    if (attempt.startTime && timeLimitMs > 0) {
+      const elapsed = Date.now() - new Date(attempt.startTime).getTime();
+      if (elapsed > timeLimitMs) {
+        attempt.endTime = new Date();
+        attempt.status = 'timeout';
+        await attempt.save();
+        return res.status(200).json({
+          message: 'Attempt timed out',
+          attempt: {
+            _id: attempt._id,
+            status: attempt.status,
+            endTime: attempt.endTime
+          },
+          allowReview: quiz.allowReview ?? true,
+          showCorrectAnswers: quiz.showCorrectAnswers || false
+        });
+      }
     }
 
     // Validate answers array
@@ -185,7 +257,8 @@ exports.submitAttempt = async (req, res) => {
         status: attempt.status,
         endTime: attempt.endTime
       },
-      showResults: quiz.showResults || false
+      allowReview: quiz.allowReview ?? true,
+      showCorrectAnswers: quiz.showCorrectAnswers || false
     });
   } catch (error) {
     console.error('Submission error:', error);
@@ -200,7 +273,7 @@ exports.submitAttempt = async (req, res) => {
 exports.getAttempt = async (req, res) => {
   try {
     const attempt = await Attempt.findById(req.params.id)
-      .populate('quiz', 'title showResults questions');
+      .populate('quiz', 'title allowReview showCorrectAnswers passingScore questions');
 
     if (!attempt) {
       return res.status(404).json({ message: 'Attempt not found' });
@@ -209,6 +282,39 @@ exports.getAttempt = async (req, res) => {
     if (attempt.user.toString() !== req.user._id.toString() && 
         req.user.role !== 'lecturer') {
       return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    const quiz = attempt.quiz;
+    const isLecturer = req.user.role === 'lecturer';
+    const allowReview = quiz?.allowReview ?? true;
+    const showCorrectAnswers = quiz?.showCorrectAnswers || false;
+
+    if (!isLecturer && !allowReview) {
+      const attemptObj = attempt.toObject();
+      attemptObj.answers = [];
+
+      if (attemptObj.quiz) {
+        attemptObj.quiz = {
+          _id: quiz._id,
+          title: quiz.title,
+          allowReview,
+          showCorrectAnswers,
+          passingScore: quiz.passingScore,
+          questionCount: Array.isArray(quiz.questions) ? quiz.questions.length : 0
+        };
+      }
+
+      return res.json({ attempt: attemptObj });
+    }
+
+    if (!isLecturer && quiz?.questions) {
+      quiz.questions = quiz.questions.map(q => {
+        const questionObj = q.toObject ? q.toObject() : { ...q };
+        if (!showCorrectAnswers) {
+          delete questionObj.correctAnswer;
+        }
+        return questionObj;
+      });
     }
 
     res.json({ attempt });

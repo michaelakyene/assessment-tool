@@ -1,5 +1,49 @@
 const Quiz = require('../models/Quiz');
 const Attempt = require('../models/Attempt');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
+const sanitizeQuizForStudent = (quiz) => {
+  if (!quiz) return quiz;
+  const quizObj = quiz.toObject ? quiz.toObject() : { ...quiz };
+
+  if (quizObj.password) {
+    delete quizObj.password;
+  }
+
+  if (Array.isArray(quizObj.questions)) {
+    quizObj.questions = quizObj.questions.map(q => {
+      const { correctAnswer, ...safeQuestion } = q.toObject ? q.toObject() : q;
+      return safeQuestion;
+    });
+  }
+
+  return quizObj;
+};
+
+const sanitizeQuizForLecturer = (quiz) => {
+  if (!quiz) return quiz;
+  const quizObj = quiz.toObject ? quiz.toObject() : { ...quiz };
+  if (quizObj.password) {
+    delete quizObj.password;
+  }
+  return quizObj;
+};
+
+const isQuizAccessAllowed = (req, quizId) => {
+  const token = req.header('X-Quiz-Access-Token');
+  if (!token || !process.env.JWT_SECRET) return false;
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.type !== 'quiz_access') return false;
+    if (decoded.quizId !== String(quizId)) return false;
+    if (decoded.userId !== String(req.user._id)) return false;
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
 
 // Create new quiz
 exports.createQuiz = async (req, res) => {
@@ -62,6 +106,10 @@ exports.createQuiz = async (req, res) => {
       explanation: q.explanation || ''
     }));
 
+    const hashedPassword = hasPassword && password
+      ? await bcrypt.hash(password, 10)
+      : null;
+
     const quiz = new Quiz({
       title,
       description,
@@ -70,7 +118,7 @@ exports.createQuiz = async (req, res) => {
       questions: transformedQuestions,
       createdBy: req.user._id,
       isPublished: false,
-      password: hasPassword ? password : null,
+      password: hasPassword ? hashedPassword : null,
       hasPassword: hasPassword || false,
       allowReview: allowReview !== undefined ? allowReview : true,
       showCorrectAnswers: showCorrectAnswers || false,
@@ -98,6 +146,7 @@ exports.getLecturerQuizzes = async (req, res) => {
   try {
     const quizzes = await Quiz.find({ createdBy: req.user._id })
       .sort({ createdAt: -1 })
+      .select('-password')
       .populate('createdBy', 'name email');
 
     res.json({ quizzes });
@@ -150,7 +199,35 @@ exports.getQuizById = async (req, res) => {
       return res.status(404).json({ message: 'Quiz not found' });
     }
 
-    res.json({ quiz });
+    const isLecturerOwner = req.user?.role === 'lecturer' &&
+      quiz.createdBy?.toString() === req.user._id.toString();
+
+    if (!isLecturerOwner) {
+      if (!quiz.isPublished) {
+        return res.status(403).json({ message: 'Quiz is not available' });
+      }
+
+      const now = new Date();
+      if (quiz.scheduledPublish && now < new Date(quiz.scheduledPublish)) {
+        return res.status(403).json({ message: 'Quiz is not yet available' });
+      }
+      if (quiz.deadline && now > new Date(quiz.deadline)) {
+        return res.status(403).json({ message: 'Quiz deadline has passed' });
+      }
+
+      if (quiz.hasPassword && !isQuizAccessAllowed(req, quiz._id)) {
+        return res.status(403).json({
+          message: 'Password required to access this quiz',
+          requiresPassword: true
+        });
+      }
+    }
+
+    const responseQuiz = isLecturerOwner
+      ? sanitizeQuizForLecturer(quiz)
+      : sanitizeQuizForStudent(quiz);
+
+    res.json({ quiz: responseQuiz });
   } catch (error) {
     console.error(`❌ Error fetching quiz ${req.params.id}:`, error.message);
     
@@ -171,9 +248,21 @@ exports.getQuizById = async (req, res) => {
 // Update quiz
 exports.updateQuiz = async (req, res) => {
   try {
+    const updateData = { ...req.body, updatedAt: Date.now() };
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'password')) {
+      if (req.body.password) {
+        updateData.password = await bcrypt.hash(req.body.password, 10);
+        updateData.hasPassword = true;
+      } else {
+        updateData.password = null;
+        updateData.hasPassword = false;
+      }
+    }
+
     const quiz = await Quiz.findOneAndUpdate(
       { _id: req.params.id, createdBy: req.user._id },
-      { $set: req.body, updatedAt: Date.now() },
+      { $set: updateData },
       { new: true, runValidators: true }
     );
 
@@ -183,7 +272,7 @@ exports.updateQuiz = async (req, res) => {
 
     res.json({
       message: 'Quiz updated successfully',
-      quiz
+      quiz: sanitizeQuizForLecturer(quiz)
     });
   } catch (error) {
     res.status(500).json({ message: 'Failed to update quiz', error: error.message });
@@ -257,7 +346,7 @@ exports.getQuizResults = async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json({
-      quiz,
+      quiz: sanitizeQuizForLecturer(quiz),
       attempts,
       totalAttempts: attempts.length
     });
@@ -269,10 +358,25 @@ exports.getQuizResults = async (req, res) => {
 // Get available quizzes for students
 exports.getAvailableQuizzes = async (req, res) => {
   try {
+    const now = new Date();
     const quizzes = await Quiz.find({
-      isPublished: true
+      isPublished: true,
+      $and: [
+        {
+          $or: [
+            { scheduledPublish: null },
+            { scheduledPublish: { $lte: now } }
+          ]
+        },
+        {
+          $or: [
+            { deadline: null },
+            { deadline: { $gte: now } }
+          ]
+        }
+      ]
     })
-    .select('title description duration maxAttempts createdAt deadline questions hasPassword')
+    .select('title description duration maxAttempts createdAt deadline hasPassword allowReview showCorrectAnswers passingScore scheduledPublish questions')
     .sort({ createdAt: -1 });
 
     // Check attempts for each quiz
@@ -283,8 +387,13 @@ exports.getAvailableQuizzes = async (req, res) => {
           user: req.user._id
         });
         
+        const quizObj = quiz.toObject();
+        const questionCount = Array.isArray(quizObj.questions) ? quizObj.questions.length : 0;
+        delete quizObj.questions;
+
         return {
-          ...quiz.toObject(),
+          ...quizObj,
+          questionCount,
           attemptCount,
           canAttempt: attemptCount < quiz.maxAttempts
         };
@@ -311,21 +420,40 @@ exports.verifyQuizPassword = async (req, res) => {
       return res.status(400).json({ message: 'This quiz does not require a password' });
     }
 
-    if (quiz.password === password) {
-      res.json({ 
-        success: true, 
-        message: 'Password verified successfully',
-        quiz: {
-          id: quiz._id,
-          title: quiz.title,
-          description: quiz.description,
-          duration: quiz.duration,
-          questions: quiz.questions
-        }
-      });
-    } else {
-      res.status(401).json({ success: false, message: 'Incorrect password' });
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ message: 'Server configuration error' });
     }
+
+    let isValid = false;
+    if (quiz.password?.startsWith('$2')) {
+      isValid = await bcrypt.compare(password, quiz.password);
+    } else {
+      isValid = quiz.password === password;
+      if (isValid) {
+        quiz.password = await bcrypt.hash(password, 10);
+        await quiz.save();
+      }
+    }
+
+    if (!isValid) {
+      return res.status(401).json({ success: false, message: 'Incorrect password' });
+    }
+
+    const quizAccessToken = jwt.sign(
+      {
+        userId: req.user._id,
+        quizId: String(quiz._id),
+        type: 'quiz_access'
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'Password verified successfully',
+      accessToken: quizAccessToken
+    });
   } catch (error) {
     res.status(500).json({ message: 'Failed to verify password', error: error.message });
   }
@@ -364,7 +492,7 @@ exports.duplicateQuiz = async (req, res) => {
 
     res.status(201).json({
       message: 'Quiz duplicated successfully',
-      quiz: duplicatedQuiz
+      quiz: sanitizeQuizForLecturer(duplicatedQuiz)
     });
   } catch (error) {
     res.status(500).json({ message: 'Failed to duplicate quiz', error: error.message });

@@ -58,7 +58,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Quiz-Access-Token']
 }));
 
 // Data sanitization
@@ -110,6 +110,14 @@ const attemptLimiter = rateLimit({
   skip: (req) => req.method !== 'POST'
 });
 
+// Quiz password verification rate limiting
+const quizPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'Too many password attempts, please try again later',
+  standardHeaders: false
+});
+
 // Body parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -149,6 +157,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 app.use('/api/auth', authRoutes);
+app.use('/api/quizzes/:id/verify-password', quizPasswordLimiter);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/attempts', attemptLimiter, attemptRoutes);
 app.use('/api/analytics', analyticsRoutes);

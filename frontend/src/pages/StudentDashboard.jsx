@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FiClock, FiCheckCircle, FiPlayCircle, FiBarChart2, FiCalendar, FiAlertCircle, FiAward, FiTrendingUp, FiRefreshCw } from 'react-icons/fi'
 import { format } from 'date-fns'
-import axios from 'axios'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import api from '../services/api'
 
 const StudentDashboard = ({ user }) => {
   const [quizzes, setQuizzes] = useState([])
@@ -24,33 +22,24 @@ const StudentDashboard = ({ user }) => {
       setError('')
       
       console.log('🔄 Loading student dashboard data...')
-      console.log('📍 API URL:', API_URL)
       console.log('🔑 Token exists:', !!localStorage.getItem('token'))
       console.log('👤 User:', user)
       
       // Fetch available quizzes
-      const quizzesResponse = await axios.get(`${API_URL}/quizzes/available`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
+      const quizzesResponse = await api.get('/quizzes/available')
       
-      console.log('✅ Quizzes loaded:', quizzesResponse.data.quizzes?.length || 0)
+      console.log('✅ Quizzes loaded:', quizzesResponse.quizzes?.length || 0)
       
       // Set quizzes (already filtered as published on backend)
-      setQuizzes(quizzesResponse.data.quizzes || [])
+      setQuizzes(quizzesResponse.quizzes || [])
       
       // Fetch my attempts
       try {
-        const attemptsResponse = await axios.get(`${API_URL}/attempts/user`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        })
-        console.log('✅ Attempts loaded:', attemptsResponse.data.attempts?.length || 0)
-        setAttempts(attemptsResponse.data.attempts || [])
+        const attemptsResponse = await api.get('/attempts/user')
+        console.log('✅ Attempts loaded:', attemptsResponse.attempts?.length || 0)
+        setAttempts(attemptsResponse.attempts || [])
       } catch (attemptError) {
-        console.log('⚠️ No attempts yet or error fetching attempts:', attemptError.message)
+        console.log('⚠️ No attempts yet or error fetching attempts:', attemptError?.message || attemptError)
         setAttempts([])
       }
       
@@ -58,13 +47,7 @@ const StudentDashboard = ({ user }) => {
       
     } catch (error) {
       console.error('❌ Failed to load dashboard:', error)
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        url: error.config?.url
-      })
-      setError(error.response?.data?.message || error.message || 'Failed to load dashboard')
+      setError(error?.message || error?.error || error || 'Failed to load dashboard')
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -338,7 +321,7 @@ const StudentDashboard = ({ user }) => {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {attempts.map((attempt) => (
-                    <tr key={attempt.id} className="hover:bg-blue-50 transition-colors">
+                    <tr key={attempt._id || attempt.id} className="hover:bg-blue-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="font-semibold text-gray-900">
                           {attempt.quiz?.title || 'Unknown Quiz'}
@@ -371,7 +354,7 @@ const StudentDashboard = ({ user }) => {
                       </td>
                       <td className="px-6 py-4">
                         <button
-                          onClick={() => navigate(`/results/${attempt.id}`)}
+                          onClick={() => navigate(`/results/${attempt._id || attempt.id}`)}
                           className="text-blue-600 hover:text-blue-800 font-bold hover:underline transition-colors"
                         >
                           View Details →

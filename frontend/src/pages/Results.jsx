@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { FiArrowLeft, FiCheck, FiX, FiBarChart2, FiClock, FiAward, FiPercent, FiAlertCircle } from 'react-icons/fi'
 import { format } from 'date-fns'
-import axios from 'axios'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import api from '../services/api'
 
 const Results = ({ user }) => {
   const { attemptId } = useParams()
@@ -20,16 +18,11 @@ const Results = ({ user }) => {
   const loadResults = async () => {
     try {
       setLoading(true)
-      const response = await axios.get(`${API_URL}/attempts/${attemptId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-      
-      setAttempt(response.data.attempt)
+      const data = await api.get(`/attempts/${attemptId}`)
+      setAttempt(data.attempt)
     } catch (error) {
       console.error('Failed to load results:', error)
-      setError(error.response?.data?.message || 'Failed to load results')
+      setError(error?.message || error?.error || error || 'Failed to load results')
     } finally {
       setLoading(false)
     }
@@ -87,8 +80,13 @@ const Results = ({ user }) => {
   const letterGrade = getLetterGrade(attempt.percentage)
   const isPassed = attempt.percentage >= (quiz.passingScore || 50)
   const correctAnswers = attempt.answers?.filter(a => a.isCorrect).length || 0
-  const totalQuestions = quiz.questions?.length || 0
-  const shouldShowResults = quiz.showResults !== false // Default to true if not specified
+  const incorrectAnswers = attempt.answers?.filter(a => !a.isCorrect).length || 0
+  const totalQuestions = quiz.questions?.length ?? quiz.questionCount ?? 0
+  const shouldShowResults = quiz.allowReview !== false
+  const showCorrectAnswers = quiz.showCorrectAnswers || false
+  const accuracy = totalQuestions > 0
+    ? Math.round((correctAnswers / totalQuestions) * 100)
+    : 0
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -106,7 +104,7 @@ const Results = ({ user }) => {
         <div className="flex justify-between items-start mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{quiz.title}</h1>
-            <p className="text-gray-600 mt-2">Attempt #{attempt.id} • {format(new Date(attempt.endTime), 'MMM d, yyyy h:mm a')}</p>
+            <p className="text-gray-600 mt-2">Attempt #{attempt._id || attempt.id} • {format(new Date(attempt.endTime), 'MMM d, yyyy h:mm a')}</p>
           </div>
           <div className="text-right">
             <div className="text-sm text-gray-500">Submitted by</div>
@@ -169,19 +167,19 @@ const Results = ({ user }) => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center p-4 bg-white rounded-lg">
               <div className="text-2xl font-bold text-gray-900">
-                {attempt.answers.filter(a => a.isCorrect).length}/{quiz.questions.length}
+                {correctAnswers}/{totalQuestions}
               </div>
               <div className="text-sm text-gray-600">Correct Answers</div>
             </div>
             <div className="text-center p-4 bg-white rounded-lg">
               <div className="text-2xl font-bold text-gray-900">
-                {attempt.answers.filter(a => !a.isCorrect).length}
+                {incorrectAnswers}
               </div>
               <div className="text-sm text-gray-600">Incorrect Answers</div>
             </div>
             <div className="text-center p-4 bg-white rounded-lg">
               <div className="text-2xl font-bold text-gray-900">
-                {Math.round((attempt.answers.filter(a => a.isCorrect).length / quiz.questions.length) * 100)}%
+                {accuracy}%
               </div>
               <div className="text-sm text-gray-600">Accuracy</div>
             </div>
@@ -202,11 +200,12 @@ const Results = ({ user }) => {
         
         <div className="space-y-6">
           {quiz.questions.map((question, index) => {
-            const userAnswer = attempt.answers.find(a => a.questionId === question.id)
+            const questionId = question._id || question.id
+            const userAnswer = attempt.answers?.find(a => String(a.questionId) === String(questionId))
             const isCorrect = userAnswer?.isCorrect || false
             
             return (
-              <div key={question.id} className="bg-white rounded-lg shadow">
+              <div key={questionId} className="bg-white rounded-lg shadow">
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex-1">
@@ -248,65 +247,81 @@ const Results = ({ user }) => {
                     {question.type === 'mcq' && (
                       <div className="space-y-3">
                         <div className="text-sm font-medium text-gray-700">Options:</div>
-                        {question.options.map((option, idx) => (
+                        {question.options.map((option, idx) => {
+                          const isUserOption = option === userAnswer?.response
+                          const isCorrectOption = showCorrectAnswers && option === question.correctAnswer
+                          const isIncorrectUserOption = showCorrectAnswers && isUserOption && option !== question.correctAnswer
+
+                          return (
                           <div
                             key={idx}
                             className={`p-4 rounded-lg border ${
-                              option === question.correctAnswer
+                              isCorrectOption
                                 ? 'border-green-300 bg-green-50'
-                                : option === userAnswer?.response && option !== question.correctAnswer
+                                : isIncorrectUserOption
                                 ? 'border-red-300 bg-red-50'
+                                : isUserOption
+                                ? 'border-blue-300 bg-blue-50'
                                 : 'border-gray-200 bg-gray-50'
                             }`}
                           >
                             <div className="flex items-center">
-                              {option === question.correctAnswer && (
+                              {isCorrectOption && (
                                 <FiCheck className="w-5 h-5 text-green-600 mr-2" />
                               )}
-                              {option === userAnswer?.response && option !== question.correctAnswer && (
+                              {isIncorrectUserOption && (
                                 <FiX className="w-5 h-5 text-red-600 mr-2" />
                               )}
                               <span className="flex-1">{option}</span>
-                              {option === question.correctAnswer && (
+                              {isCorrectOption && (
                                 <span className="text-sm font-medium text-green-600">
                                   ✓ Correct Answer
                                 </span>
                               )}
-                              {option === userAnswer?.response && option !== question.correctAnswer && (
+                              {isIncorrectUserOption && (
                                 <span className="text-sm font-medium text-red-600">
                                   ✗ Your Answer
                                 </span>
                               )}
+                              {!showCorrectAnswers && isUserOption && (
+                                <span className="text-sm font-medium text-blue-600">
+                                  • Your Answer
+                                </span>
+                              )}
                             </div>
                           </div>
-                        ))}
+                        )})}
                       </div>
                     )}
 
                     {(question.type === 'true_false' || question.type === 'short_answer') && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm font-medium text-gray-700 mb-2">Correct Answer:</div>
-                          <div className="p-4 border border-green-300 bg-green-50 rounded-lg">
-                            <div className="flex items-center">
-                              <FiCheck className="w-5 h-5 text-green-600 mr-2" />
-                              <span>{question.correctAnswer}</span>
+                        {showCorrectAnswers && (
+                          <div>
+                            <div className="text-sm font-medium text-gray-700 mb-2">Correct Answer:</div>
+                            <div className="p-4 border border-green-300 bg-green-50 rounded-lg">
+                              <div className="flex items-center">
+                                <FiCheck className="w-5 h-5 text-green-600 mr-2" />
+                                <span>{question.correctAnswer}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        )}
                         <div>
                           <div className="text-sm font-medium text-gray-700 mb-2">Your Answer:</div>
                           <div className={`p-4 rounded-lg border ${
-                            isCorrect
-                              ? 'border-green-300 bg-green-50'
-                              : 'border-red-300 bg-red-50'
+                            showCorrectAnswers
+                              ? (isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50')
+                              : 'border-blue-300 bg-blue-50'
                           }`}>
                             <div className="flex items-center">
-                              {isCorrect ? (
-                                <FiCheck className="w-5 h-5 text-green-600 mr-2" />
-                              ) : (
-                                <FiX className="w-5 h-5 text-red-600 mr-2" />
-                              )}
+                              {showCorrectAnswers ? (
+                                isCorrect ? (
+                                  <FiCheck className="w-5 h-5 text-green-600 mr-2" />
+                                ) : (
+                                  <FiX className="w-5 h-5 text-red-600 mr-2" />
+                                )
+                              ) : null}
                               <span>{userAnswer?.response || 'No answer provided'}</span>
                             </div>
                           </div>

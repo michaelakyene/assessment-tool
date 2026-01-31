@@ -15,6 +15,11 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true
+})
+const refreshClient = axios.create({
+  baseURL: getBaseURL(),
+  withCredentials: true
 })
 
 // Request interceptor to add token
@@ -34,14 +39,38 @@ api.interceptors.request.use(
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response.data,
-  (error) => {
-    if (error.response?.status === 401) {
+  async (error) => {
+    const originalRequest = error.config
+    const status = error.response?.status
+    const errorCode = error.response?.data?.code
+
+    if (status === 401 && errorCode === 'TOKEN_EXPIRED' && !originalRequest?._retry) {
+      originalRequest._retry = true
+      try {
+        const refreshResponse = await refreshClient.post('/auth/refresh')
+        const newToken = refreshResponse?.data?.token
+        if (newToken) {
+          localStorage.setItem('token', newToken)
+          originalRequest.headers = originalRequest.headers || {}
+          originalRequest.headers.Authorization = `Bearer ${newToken}`
+          return api(originalRequest)
+        }
+      } catch (refreshError) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+        return Promise.reject(refreshError.response?.data || refreshError.message)
+      }
+    }
+
+    if (status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'
     }
+
     return Promise.reject(error.response?.data || error.message)
   }
 )
 
-export { api }
+export default api

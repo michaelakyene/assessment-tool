@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { FiArrowLeft, FiUsers, FiClock, FiBarChart2, FiTrendingUp, FiCheckCircle, FiXCircle, FiAward, FiRefreshCw } from 'react-icons/fi'
-import axios from 'axios'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import api from '../services/api'
 
 const QuizAnalytics = () => {
   const { id } = useParams()
@@ -30,20 +28,18 @@ const QuizAnalytics = () => {
       
       try {
         // Fetch quiz details with timeout
-        const quizResponse = await axios.get(`${API_URL}/quizzes/${id}`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        const quizResponse = await api.get(`/quizzes/${id}`, {
           signal: controller.signal,
           timeout: 15000
         })
-        setQuiz(quizResponse.data.quiz || quizResponse.data)
+        setQuiz(quizResponse.quiz || quizResponse)
 
         // Fetch analytics with timeout
-        const analyticsResponse = await axios.get(`${API_URL}/analytics/quiz/${id}`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        const analyticsResponse = await api.get(`/analytics/quiz/${id}`, {
           signal: controller.signal,
           timeout: 15000
         })
-        setAnalytics(analyticsResponse.data)
+        setAnalytics(analyticsResponse)
         setError('')
       } finally {
         clearTimeout(timeoutId)
@@ -60,7 +56,7 @@ const QuizAnalytics = () => {
         }
         setError('Request timeout - server is taking too long. Please try again or check back later.')
       } else {
-        setError(error.response?.data?.message || error.message || 'Failed to load analytics')
+        setError(error?.message || error?.error || error || 'Failed to load analytics')
       }
     } finally {
       setLoading(false)

@@ -1,32 +1,30 @@
-import axios from 'axios'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import api from './api'
 
 // Register new user
 export const register = async (userData) => {
   try {
-    const response = await axios.post(`${API_URL}/auth/register`, userData)
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token)
-      localStorage.setItem('user', JSON.stringify(response.data.user))
+    const data = await api.post('/auth/register', userData)
+    if (data.token) {
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
     }
-    return response.data
+    return data
   } catch (error) {
-    throw error.response?.data || { message: 'Registration failed' }
+    throw error || { message: 'Registration failed' }
   }
 }
 
 // Login user
 export const login = async (credentials) => {
   try {
-    const response = await axios.post(`${API_URL}/auth/login`, credentials)
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token)
-      localStorage.setItem('user', JSON.stringify(response.data.user))
+    const data = await api.post('/auth/login', credentials)
+    if (data.token) {
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
     }
-    return response.data
+    return data
   } catch (error) {
-    throw error.response?.data || { message: 'Login failed' }
+    throw error || { message: 'Login failed' }
   }
 }
 

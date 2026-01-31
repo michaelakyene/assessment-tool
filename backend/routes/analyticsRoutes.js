@@ -10,7 +10,8 @@ const {
 
 // Lecturer-only routes
 router.get('/overview', authMiddleware, roleMiddleware('lecturer'), getOverview);
-router.get('/quiz/:quizId', authMiddleware, roleMiddleware('lecturer'), validateMongoId, getQuizAnalytics);
-router.get('/student/:studentId', authMiddleware, roleMiddleware('lecturer'), validateMongoId, getStudentAnalytics);
+router.get('/quiz/:quizId', authMiddleware, roleMiddleware('lecturer'), validateMongoId('quizId'), getQuizAnalytics);
+router.get('/student/me', authMiddleware, getStudentAnalytics);
+router.get('/student/:studentId', authMiddleware, roleMiddleware('lecturer'), validateMongoId('studentId'), getStudentAnalytics);
 
 module.exports = router;
