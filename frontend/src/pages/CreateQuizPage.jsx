@@ -49,14 +49,20 @@ const CreateQuizPage = () => {
   const loadQuiz = async () => {
     try {
       setLoading(true)
+      console.log(`📚 Loading quiz: ${id}`)
       const data = await getQuizById(id)
+      console.log(`✅ Quiz loaded successfully`)
       setFormData({
         ...data.quiz,
         scheduledPublish: data.quiz.scheduledPublish ? format(new Date(data.quiz.scheduledPublish), "yyyy-MM-dd'T'HH:mm") : '',
         deadline: data.quiz.deadline ? format(new Date(data.quiz.deadline), "yyyy-MM-dd'T'HH:mm") : ''
       })
     } catch (error) {
-      setToast({ message: 'Failed to load quiz: ' + error.message, type: 'error' })
+      console.error(`❌ Failed to load quiz: ${error.message}`)
+      const message = error.response?.status === 404 
+        ? 'Quiz not found - it may have been deleted'
+        : 'Failed to load quiz: ' + error.message
+      setToast({ message, type: 'error' })
       setTimeout(() => navigate('/'), 2000)
     } finally {
       setLoading(false)

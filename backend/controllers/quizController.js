@@ -110,68 +110,61 @@ exports.getLecturerQuizzes = async (req, res) => {
 exports.getQuizById = async (req, res) => {
   try {
     const startTime = Date.now();
-    console.log(`🔍 Getting quiz by ID: ${req.params.id}`);
+    const quizId = req.params.id;
+    console.log(`🔍 Getting quiz by ID: ${quizId}`);
     
-    // Try with lean() and timeout for faster response
+    // Quick validation of ObjectId format first
+    if (!quizId || quizId.length !== 24 || !/^[0-9a-f]{24}$/i.test(quizId)) {
+      return res.status(400).json({ message: 'Invalid quiz ID format' });
+    }
+    
+    // Simple, fast query with lean() and very short timeout
     let quiz;
     try {
-      // First attempt: lean query with strict timeout
-      quiz = await Quiz.findById(req.params.id)
+      quiz = await Quiz.findById(quizId)
         .lean()
-        .maxTimeMS(12000)
+        .maxTimeMS(8000)
         .exec();
-    } catch (err) {
-      if (err.name === 'MongooseError' || err.message.includes('timeout')) {
-        console.warn(`⚠️ Query timeout (attempt 1), trying with fewer fields...`);
-        
-        // Second attempt: fetch only without questions array first
-        try {
-          quiz = await Quiz.findById(req.params.id)
-            .select('-questions')
-            .lean()
-            .maxTimeMS(8000)
-            .exec();
-            
-          if (!quiz) {
-            throw new Error('Quiz not found');
-          }
-          
-          // Now fetch questions separately if quiz exists
-          console.log(`📦 Base quiz loaded, fetching questions...`);
-          const quizWithQuestions = await Quiz.findById(req.params.id)
-            .lean()
-            .maxTimeMS(8000)
-            .exec();
-          
-          if (quizWithQuestions) {
-            quiz = quizWithQuestions;
-          }
-        } catch (err2) {
-          console.error(`❌ Second attempt failed:`, err2.message);
-          throw err;
+    } catch (mongoError) {
+      console.error(`❌ MongoDB error for quiz ${quizId}:`, mongoError.message);
+      
+      // If timeout, try count first to see if quiz even exists
+      try {
+        const exists = await Quiz.countDocuments({ _id: quizId }).maxTimeMS(5000);
+        if (!exists) {
+          return res.status(404).json({ message: 'Quiz not found' });
         }
-      } else {
-        throw err;
+      } catch (countError) {
+        console.warn(`❌ Could not verify quiz existence: ${countError.message}`);
       }
+      
+      // If we still can't get it, return error
+      throw mongoError;
     }
     
     const duration = Date.now() - startTime;
-    console.log(`✅ Quiz fetched in ${duration}ms`);
+    console.log(`✅ Quiz query completed in ${duration}ms`);
     
     if (!quiz) {
+      console.log(`📭 Quiz not found: ${quizId}`);
       return res.status(404).json({ message: 'Quiz not found' });
     }
 
     res.json({ quiz });
   } catch (error) {
     console.error(`❌ Error fetching quiz ${req.params.id}:`, error.message);
+    
     if (error.message.includes('timeout')) {
       return res.status(504).json({ 
-        message: 'Database query timeout', 
+        message: 'Database query timeout - quiz may be too large or corrupted',
         code: 'QUERY_TIMEOUT'
       });
     }
-    res.status(500).json({ message: 'Failed to fetch quiz', error: error.message });
+    
+    res.status(500).json({ 
+      message: 'Failed to fetch quiz', 
+      error: error.message 
+    });
   }
 };
 
