@@ -2,12 +2,12 @@ import axios from 'axios'
 
 // Get API base URL from environment or use relative path for development
 const getBaseURL = () => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL
+  // Production: Use Heroku backend
+  if (import.meta.env.PROD) {
+    return import.meta.env.VITE_API_URL || 'https://student-assessment-api-9754ea9fac96.herokuapp.com/api'
   }
-  // In development with vite proxy, use /api
-  // In production, this will be relative to the domain
-  return '/api'
+  // Development: Use vite proxy
+  return import.meta.env.VITE_API_URL || '/api'
 }
 
 const api = axios.create({
