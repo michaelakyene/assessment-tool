@@ -44,6 +44,7 @@ api.interceptors.response.use(
     const status = error.response?.status
     const errorCode = error.response?.data?.code
 
+    // Handle token expiry with refresh
     if (status === 401 && errorCode === 'TOKEN_EXPIRED' && !originalRequest?._retry) {
       originalRequest._retry = true
       try {
@@ -56,17 +57,30 @@ api.interceptors.response.use(
           return api(originalRequest)
         }
       } catch (refreshError) {
+        console.warn('Token refresh failed:', refreshError.message)
         localStorage.removeItem('token')
         localStorage.removeItem('user')
-        window.location.href = '/login'
+        localStorage.removeItem('auth-storage')
+        
+        // Only redirect if not already on login page to prevent infinite loops
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+          window.location.href = '/login'
+        }
         return Promise.reject(refreshError.response?.data || refreshError.message)
       }
     }
 
+    // Handle permanent auth failures
     if (status === 401) {
+      console.warn('Authentication failed:', error.response?.data?.message)
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      window.location.href = '/login'
+      localStorage.removeItem('auth-storage')
+      
+      // Only redirect if not already on login page
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+        window.location.href = '/login'
+      }
     }
 
     return Promise.reject(error.response?.data || error.message)

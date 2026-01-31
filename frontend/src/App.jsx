@@ -22,22 +22,30 @@ function App() {
 
   useEffect(() => {
     const initAuth = () => {
-      const token = localStorage.getItem('token')
-      const storedUser = localStorage.getItem('user')
-      
-      if (token && storedUser) {
-        try {
-          const userData = JSON.parse(storedUser)
-          setUser(userData)
-        } catch (error) {
-          console.error('Auth init error:', error)
-          logout()
+      try {
+        const token = localStorage.getItem('token')
+        const storedUser = localStorage.getItem('user')
+        
+        if (token && storedUser) {
+          try {
+            const userData = JSON.parse(storedUser)
+            setUser(userData)
+          } catch (parseError) {
+            console.error('Failed to parse user data:', parseError)
+            // Clear corrupted data
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            localStorage.removeItem('auth-storage')
+          }
         }
+      } catch (error) {
+        console.error('Auth initialization error:', error)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     initAuth()
-  }, [logout, setUser])
+  }, [setUser])
 
   useEffect(() => {
     if (!user) {
