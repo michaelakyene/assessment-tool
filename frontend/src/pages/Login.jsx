@@ -59,14 +59,18 @@ const Login = ({ login }) => {
         console.log('Login response:', response)
       } else {
         // Register
-        console.log('Attempting registration...')
-        response = await registerAPI({
+        const registerData = {
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          role: formData.role,
-          studentId: formData.role === 'student' ? formData.studentId : undefined
-        })
+          role: formData.role
+        }
+        // Only add studentId if it's a student role and has a value
+        if (formData.role === 'student' && formData.studentId) {
+          registerData.studentId = formData.studentId
+        }
+        console.log('Attempting registration with data:', registerData)
+        response = await registerAPI(registerData)
         console.log('Registration response:', response)
       }
       
@@ -76,7 +80,8 @@ const Login = ({ login }) => {
       // Navigate to dashboard
       navigate('/')
     } catch (err) {
-      console.error('Auth error:', err)
+      console.error('Auth error full:', err)
+      console.error('Auth error details:', JSON.stringify(err, null, 2))
       const errorMessage = err.message || err.error || 'Authentication failed. Please try again.'
       setError(errorMessage)
     } finally {

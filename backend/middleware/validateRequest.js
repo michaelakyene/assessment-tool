@@ -43,9 +43,10 @@ const validateRegister = [
     .withMessage('Role must be either student or lecturer'),
   
   body('studentId')
-    .optional({ checkFalsy: true })
+    .if(body => body !== undefined && body !== null && body !== '')
     .trim()
     .isLength({ min: 3, max: 50 })
+    .withMessage('Student ID must be between 3 and 50 characters')
     .matches(/^[A-Z0-9/-]+$/)
     .withMessage('Student ID must contain only uppercase letters, numbers, hyphens and forward slashes'),
   
