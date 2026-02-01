@@ -164,10 +164,17 @@ exports.getQuizById = async (req, res) => {
   try {
     const startTime = Date.now();
     const quizId = req.params.id;
-    console.log(`🔍 [${new Date().toISOString()}] Getting quiz by ID: ${quizId}`);
+    const userRole = req.user?.role || 'unknown';
+    const userId = req.user?._id || 'unknown';
+    
+    console.log(`\n🔍 [${new Date().toISOString()}] GET /quizzes/:id REQUEST`)
+    console.log(`  Quiz ID: ${quizId}`)
+    console.log(`  User ID: ${userId}`)
+    console.log(`  User Role: ${userRole}`)
     
     // Quick validation of ObjectId format first
     if (!quizId || quizId.length !== 24 || !/^[0-9a-f]{24}$/i.test(quizId)) {
+      console.log(`  ❌ Invalid ID format`)
       return res.status(400).json({ message: 'Invalid quiz ID format' });
     }
     

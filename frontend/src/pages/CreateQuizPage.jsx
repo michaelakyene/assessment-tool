@@ -49,8 +49,11 @@ const CreateQuizPage = () => {
   const loadQuiz = async () => {
     try {
       setLoading(true)
+      console.log(`📖 Loading quiz with ID: ${id}`)
       const data = await getQuizById(id)
-      const mappedQuestions = (data.quiz.questions || []).map((q) => ({
+      console.log('✅ Quiz loaded:', data)
+      
+      const mappedQuestions = (data.quiz?.questions || data.questions || []).map((q) => ({
         type: q.type === 'mcq' ? 'multiple_choice' : q.type,
         questionText: q.questionText || q.text || '',
         options: q.options || [],
@@ -58,18 +61,20 @@ const CreateQuizPage = () => {
         marks: q.marks || 1,
         explanation: q.explanation || ''
       }))
+      
+      const quizData = data.quiz || data
       setFormData({
-        ...data.quiz,
+        ...quizData,
         questions: mappedQuestions,
         password: '',
-        scheduledPublish: data.quiz.scheduledPublish ? format(new Date(data.quiz.scheduledPublish), "yyyy-MM-dd'T'HH:mm") : '',
-        deadline: data.quiz.deadline ? format(new Date(data.quiz.deadline), "yyyy-MM-dd'T'HH:mm") : ''
+        scheduledPublish: quizData.scheduledPublish ? format(new Date(quizData.scheduledPublish), "yyyy-MM-dd'T'HH:mm") : '',
+        deadline: quizData.deadline ? format(new Date(quizData.deadline), "yyyy-MM-dd'T'HH:mm") : ''
       })
     } catch (error) {
-      console.error(`❌ Failed to load quiz: ${error.message}`)
+      console.error(`❌ Failed to load quiz:`, error)
       const message = error.response?.status === 404 
         ? 'Quiz not found - it may have been deleted'
-        : 'Failed to load quiz: ' + error.message
+        : error.message || 'Failed to load quiz'
       setToast({ message, type: 'error' })
       setTimeout(() => navigate('/'), 2000)
     } finally {

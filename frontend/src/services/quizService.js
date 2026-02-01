@@ -21,8 +21,40 @@ export const getLecturerQuizzes = async () => {
 // Get quiz by ID
 export const getQuizById = async (quizId) => {
   try {
-    return await api.get(`/quizzes/${quizId}`)
+    if (!quizId) {
+      throw new Error('Quiz ID is required')
+    }
+    
+    console.log(`📥 Fetching quiz with ID: ${quizId}`)
+    
+    const response = await Promise.race([
+      api.get(`/quizzes/${quizId}`),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout - taking longer than 15 seconds')), 15000)
+      )
+    ])
+    
+    console.log(`✅ Quiz fetched successfully:`, response)
+    return response
   } catch (error) {
+    console.error(`❌ Failed to fetch quiz ${quizId}:`, error)
+    
+    if (error.message?.includes('timeout')) {
+      throw new Error('Request timeout - please check your internet connection and try again')
+    }
+    
+    if (error.response?.status === 404) {
+      throw new Error('Quiz not found - it may have been deleted')
+    }
+    
+    if (error.response?.status === 403) {
+      throw new Error('You do not have permission to access this quiz')
+    }
+    
+    if (error.response?.status === 401) {
+      throw new Error('Your session has expired - please log in again')
+    }
+    
     throw error || { message: 'Failed to fetch quiz' }
   }
 }
@@ -30,8 +62,17 @@ export const getQuizById = async (quizId) => {
 // Update quiz
 export const updateQuiz = async (quizId, quizData) => {
   try {
-    return await api.put(`/quizzes/${quizId}`, quizData)
+    console.log(`📝 Updating quiz ${quizId}`)
+    const response = await Promise.race([
+      api.put(`/quizzes/${quizId}`, quizData),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 30000)
+      )
+    ])
+    console.log(`✅ Quiz updated successfully`)
+    return response
   } catch (error) {
+    console.error(`❌ Failed to update quiz:`, error)
     throw error || { message: 'Failed to update quiz' }
   }
 }
@@ -39,8 +80,17 @@ export const updateQuiz = async (quizId, quizData) => {
 // Delete quiz
 export const deleteQuiz = async (quizId) => {
   try {
-    return await api.delete(`/quizzes/${quizId}`)
+    console.log(`🗑️ Deleting quiz ${quizId}`)
+    const response = await Promise.race([
+      api.delete(`/quizzes/${quizId}`),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 15000)
+      )
+    ])
+    console.log(`✅ Quiz deleted successfully`)
+    return response
   } catch (error) {
+    console.error(`❌ Failed to delete quiz:`, error)
     throw error || { message: 'Failed to delete quiz' }
   }
 }
@@ -48,8 +98,17 @@ export const deleteQuiz = async (quizId) => {
 // Toggle publish status
 export const togglePublishQuiz = async (quizId, isPublished) => {
   try {
-    return await api.patch(`/quizzes/${quizId}/publish`, { isPublished })
+    console.log(`📢 ${isPublished ? 'Publishing' : 'Unpublishing'} quiz ${quizId}`)
+    const response = await Promise.race([
+      api.patch(`/quizzes/${quizId}/publish`, { isPublished }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 15000)
+      )
+    ])
+    console.log(`✅ Quiz ${isPublished ? 'published' : 'unpublished'} successfully`)
+    return response
   } catch (error) {
+    console.error(`❌ Failed to update quiz status:`, error)
     throw error || { message: 'Failed to update quiz status' }
   }
 }
@@ -57,8 +116,17 @@ export const togglePublishQuiz = async (quizId, isPublished) => {
 // Duplicate quiz
 export const duplicateQuiz = async (quizId) => {
   try {
-    return await api.post(`/quizzes/${quizId}/duplicate`, {})
+    console.log(`📋 Duplicating quiz ${quizId}`)
+    const response = await Promise.race([
+      api.post(`/quizzes/${quizId}/duplicate`, {}),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 20000)
+      )
+    ])
+    console.log(`✅ Quiz duplicated successfully`)
+    return response
   } catch (error) {
+    console.error(`❌ Failed to duplicate quiz:`, error)
     throw error || { message: 'Failed to duplicate quiz' }
   }
 }
