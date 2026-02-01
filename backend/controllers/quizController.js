@@ -153,7 +153,31 @@ exports.getLecturerQuizzes = async (req, res) => {
       .select('-password')
       .lean();
 
-    res.json({ quizzes });
+    // Enhance quizzes with real-time attempt statistics
+    const quizzesWithStats = await Promise.all(
+      quizzes.map(async (quiz) => {
+        // Get all completed attempts for this quiz
+        const attempts = await Attempt.find({
+          quiz: quiz._id,
+          status: 'completed'
+        })
+          .select('user percentage')
+          .lean();
+
+        const totalStudents = new Set(attempts.map(a => a.user?.toString())).size;
+        const averageScore = attempts.length > 0
+          ? Math.round(attempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / attempts.length)
+          : 0;
+
+        return {
+          ...quiz,
+          totalStudents,
+          averageScore
+        };
+      })
+    );
+
+    res.json({ quizzes: quizzesWithStats });
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch quizzes', error: error.message });
   }
@@ -417,17 +441,25 @@ exports.getAvailableQuizzes = async (req, res) => {
     .select('title description duration maxAttempts createdAt deadline hasPassword allowReview showCorrectAnswers passingScore scheduledPublish questions')
     .sort({ createdAt: -1 });
 
-    // Check attempts for each quiz
+    // Check COMPLETED attempts for each quiz
     const quizzesWithAttempts = await Promise.all(
       quizzes.map(async (quiz) => {
         const attemptCount = await Attempt.countDocuments({
           quiz: quiz._id,
-          user: req.user._id
+          user: req.user._id,
+          status: 'completed'
         });
         
         const quizObj = quiz.toObject();
         const questionCount = Array.isArray(quizObj.questions) ? quizObj.questions.length : 0;
-        delete quizObj.questions;
+        
+        // Remove correct answers from questions but keep the questions array with count
+        if (Array.isArray(quizObj.questions)) {
+          quizObj.questions = quizObj.questions.map(q => {
+            const { correctAnswer, ...safeQuestion } = q;
+            return safeQuestion;
+          });
+        }
 
         return {
           ...quizObj,

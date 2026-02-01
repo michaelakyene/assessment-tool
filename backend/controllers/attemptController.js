@@ -66,14 +66,19 @@ exports.startAttempt = async (req, res) => {
       });
     }
 
-    // Check attempt limit
+    // Check attempt limit - only count COMPLETED attempts
     const attemptCount = await Attempt.countDocuments({
       quiz: quizId,
-      user: req.user._id
+      user: req.user._id,
+      status: 'completed'
     });
 
     if (attemptCount >= quiz.maxAttempts) {
-      return res.status(403).json({ message: 'Maximum attempts reached' });
+      return res.status(403).json({ 
+        message: `Maximum attempts reached. You have completed ${attemptCount} of ${quiz.maxAttempts} allowed attempts.`,
+        attemptsUsed: attemptCount,
+        maxAttempts: quiz.maxAttempts
+      });
     }
 
     // Check if there's an in-progress attempt
