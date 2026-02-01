@@ -3,6 +3,19 @@ const Attempt = require('../models/Attempt');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const withTimeout = (promise, ms, label) => {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const error = new Error(`${label} timeout`);
+      error.code = 'QUERY_TIMEOUT';
+      reject(error);
+    }, ms);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+};
+
 const sanitizeQuizForStudent = (quiz) => {
   if (!quiz) return quiz;
   const quizObj = quiz.toObject ? quiz.toObject() : { ...quiz };
@@ -170,24 +183,22 @@ exports.getQuizById = async (req, res) => {
     // Simple, fast query with lean() and very short timeout
     let quiz;
     try {
-      quiz = await Quiz.findById(quizId)
-        .lean()
-        .maxTimeMS(15000)
-        .exec();
+      quiz = await withTimeout(
+        Quiz.findById(quizId)
+          .lean()
+          .maxTimeMS(10000)
+          .exec(),
+        11000,
+        'Get quiz'
+      );
     } catch (mongoError) {
       console.error(`❌ MongoDB error for quiz ${quizId}:`, mongoError.message);
-      
-      // If timeout, try count first to see if quiz even exists
-      try {
-        const exists = await Quiz.countDocuments({ _id: quizId }).maxTimeMS(10000);
-        if (!exists) {
-          return res.status(404).json({ message: 'Quiz not found' });
-        }
-      } catch (countError) {
-        console.warn(`❌ Could not verify quiz existence: ${countError.message}`);
+      if (mongoError.code === 'QUERY_TIMEOUT' || mongoError.message.includes('timeout')) {
+        return res.status(504).json({
+          message: 'Database query timeout - quiz may be too large or busy',
+          code: 'QUERY_TIMEOUT'
+        });
       }
-      
-      // If we still can't get it, return error
       throw mongoError;
     }
     
@@ -271,10 +282,14 @@ exports.updateQuiz = async (req, res) => {
       }
     }
 
-    const quiz = await Quiz.findOneAndUpdate(
-      { _id: req.params.id, createdBy: req.user._id },
-      { $set: updateData },
-      { new: true, runValidators: true }
+    const quiz = await withTimeout(
+      Quiz.findOneAndUpdate(
+        { _id: req.params.id, createdBy: req.user._id },
+        { $set: updateData },
+        { new: true, runValidators: true }
+      ),
+      12000,
+      'Update quiz'
     );
 
     if (!quiz) {
@@ -293,17 +308,23 @@ exports.updateQuiz = async (req, res) => {
 // Delete quiz
 exports.deleteQuiz = async (req, res) => {
   try {
-    const quiz = await Quiz.findOneAndDelete({
-      _id: req.params.id,
-      createdBy: req.user._id
-    });
+    const result = await withTimeout(
+      Quiz.deleteOne({
+        _id: req.params.id,
+        createdBy: req.user._id
+      }),
+      12000,
+      'Delete quiz'
+    );
 
-    if (!quiz) {
+    if (!result || result.deletedCount === 0) {
       return res.status(404).json({ message: 'Quiz not found or unauthorized' });
     }
 
     // Delete associated attempts
-    await Attempt.deleteMany({ quiz: req.params.id });
+    Attempt.deleteMany({ quiz: req.params.id }).catch((error) => {
+      console.warn(`⚠️ Failed to delete attempts for quiz ${req.params.id}:`, error.message);
+    });
 
     res.json({ message: 'Quiz deleted successfully' });
   } catch (error) {
@@ -317,21 +338,23 @@ exports.togglePublish = async (req, res) => {
     console.log(`🔄 Toggling publish for quiz: ${req.params.id}`);
     console.log(`📄 Request body:`, req.body);
     
-    const quiz = await Quiz.findOneAndUpdate(
-      { _id: req.params.id, createdBy: req.user._id },
-      { $set: { isPublished: req.body.isPublished } },
-      { new: true }
-    ).maxTimeMS(5000); // 5 second timeout
+    const result = await withTimeout(
+      Quiz.updateOne(
+        { _id: req.params.id, createdBy: req.user._id },
+        { $set: { isPublished: req.body.isPublished } }
+      ).maxTimeMS(8000),
+      10000,
+      'Publish quiz'
+    );
     
-    console.log(`📦 Quiz found and updated:`, quiz ? 'Yes' : 'No');
+    console.log(`📦 Quiz found and updated:`, result?.modifiedCount > 0 ? 'Yes' : 'No');
 
-    if (!quiz) {
+    if (!result || result.matchedCount === 0) {
       return res.status(404).json({ message: 'Quiz not found or unauthorized' });
     }
 
     res.json({
-      message: `Quiz ${quiz.isPublished ? 'published' : 'unpublished'} successfully`,
-      quiz
+      message: `Quiz ${req.body.isPublished ? 'published' : 'unpublished'} successfully`
     });
   } catch (error) {
     console.error(`❌ Error toggling publish for quiz ${req.params.id}:`, error);
@@ -473,10 +496,17 @@ exports.verifyQuizPassword = async (req, res) => {
 // Duplicate quiz
 exports.duplicateQuiz = async (req, res) => {
   try {
-    const originalQuiz = await Quiz.findOne({
-      _id: req.params.id,
-      createdBy: req.user._id
-    });
+    const originalQuiz = await withTimeout(
+      Quiz.findOne({
+        _id: req.params.id,
+        createdBy: req.user._id
+      })
+        .select('title description duration maxAttempts questions password hasPassword allowReview showCorrectAnswers randomizeQuestions randomizeOptions passingScore')
+        .lean()
+        .maxTimeMS(10000),
+      12000,
+      'Duplicate quiz'
+    );
 
     if (!originalQuiz) {
       return res.status(404).json({ message: 'Quiz not found or unauthorized' });
