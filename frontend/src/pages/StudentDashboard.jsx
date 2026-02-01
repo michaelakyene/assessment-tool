@@ -183,9 +183,10 @@ const StudentDashboard = ({ user }) => {
             {quizzes.map((quiz) => {
               const quizId = quiz._id || quiz.id
               const hasDeadline = quiz.deadline && new Date(quiz.deadline) < new Date()
-              const canAttempt = !hasDeadline
               const attemptCount = quiz.attemptCount || 0
               const maxAttempts = quiz.maxAttempts || 3
+              const attemptsExhausted = attemptCount >= maxAttempts
+              const canAttempt = !hasDeadline && !attemptsExhausted
               
               return (
               <div key={quizId} className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group">
@@ -243,7 +244,13 @@ const StudentDashboard = ({ user }) => {
                     }`}
                   >
                     <FiPlayCircle className="w-5 h-5" />
-                    <span>{hasDeadline ? 'Deadline Passed' : 'Start Quiz'}</span>
+                    <span>
+                      {hasDeadline 
+                        ? 'Deadline Passed' 
+                        : attemptsExhausted 
+                        ? 'All Attempts Used' 
+                        : 'Start Quiz'}
+                    </span>
                   </button>
                 </div>
               </div>
