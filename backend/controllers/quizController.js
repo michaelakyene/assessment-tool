@@ -250,6 +250,17 @@ exports.updateQuiz = async (req, res) => {
   try {
     const updateData = { ...req.body, updatedAt: Date.now() };
 
+    if (Array.isArray(req.body.questions)) {
+      updateData.questions = req.body.questions.map((q) => ({
+        text: q.questionText || q.text || '',
+        type: q.type === 'multiple_choice' ? 'mcq' : q.type,
+        options: q.options || [],
+        correctAnswer: q.correctAnswer || '',
+        marks: q.marks || 1,
+        explanation: q.explanation || ''
+      }));
+    }
+
     if (Object.prototype.hasOwnProperty.call(req.body, 'password')) {
       if (req.body.password) {
         updateData.password = await bcrypt.hash(req.body.password, 10);

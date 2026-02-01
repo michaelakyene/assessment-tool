@@ -52,8 +52,18 @@ const CreateQuizPage = () => {
       console.log(`📚 Loading quiz: ${id}`)
       const data = await getQuizById(id)
       console.log(`✅ Quiz loaded successfully`)
+      const mappedQuestions = (data.quiz.questions || []).map((q) => ({
+        type: q.type === 'mcq' ? 'multiple_choice' : q.type,
+        questionText: q.questionText || q.text || '',
+        options: q.options || [],
+        correctAnswer: q.correctAnswer || '',
+        marks: q.marks || 1,
+        explanation: q.explanation || ''
+      }))
       setFormData({
         ...data.quiz,
+        questions: mappedQuestions,
+        password: '',
         scheduledPublish: data.quiz.scheduledPublish ? format(new Date(data.quiz.scheduledPublish), "yyyy-MM-dd'T'HH:mm") : '',
         deadline: data.quiz.deadline ? format(new Date(data.quiz.deadline), "yyyy-MM-dd'T'HH:mm") : ''
       })
