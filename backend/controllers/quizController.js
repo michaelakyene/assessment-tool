@@ -161,7 +161,7 @@ exports.getQuizById = async (req, res) => {
   try {
     const startTime = Date.now();
     const quizId = req.params.id;
-    console.log(`🔍 Getting quiz by ID: ${quizId}`);
+    console.log(`🔍 [${new Date().toISOString()}] Getting quiz by ID: ${quizId}`);
     
     // Quick validation of ObjectId format first
     if (!quizId || quizId.length !== 24 || !/^[0-9a-f]{24}$/i.test(quizId)) {
@@ -171,13 +171,19 @@ exports.getQuizById = async (req, res) => {
     // Query with proper MongoDB timeout handling
     let quiz;
     try {
+      const queryStart = Date.now();
       const quizObjectId = new mongoose.Types.ObjectId(quizId);
+      console.log(`  ⏱️ Starting MongoDB query...`);
+      
       quiz = await Quiz.collection.findOne(
         { _id: quizObjectId },
         { maxTimeMS: 15000 }
       );
+      
+      const queryDuration = Date.now() - queryStart;
+      console.log(`  ✅ MongoDB query completed in ${queryDuration}ms`);
     } catch (mongoError) {
-      console.error(`❌ MongoDB error for quiz ${quizId}:`, mongoError.message);
+      console.error(`  ❌ MongoDB error for quiz ${quizId}:`, mongoError.message);
       if (mongoError.message.includes('maxTimeMS') || mongoError.message.includes('timeout')) {
         return res.status(504).json({
           message: 'Database query timeout - quiz may be too large or busy',
@@ -188,10 +194,10 @@ exports.getQuizById = async (req, res) => {
     }
     
     const duration = Date.now() - startTime;
-    console.log(`✅ Quiz query completed in ${duration}ms`);
+    console.log(`✅ Total request time: ${duration}ms for quiz ${quizId}`);
     
     if (!quiz) {
-      console.log(`📭 Quiz not found: ${quizId}`);
+      console.log(`  📭 Quiz not found: ${quizId}`);
       return res.status(404).json({ message: 'Quiz not found' });
     }
 
