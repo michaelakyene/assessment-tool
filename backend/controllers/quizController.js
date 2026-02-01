@@ -1,5 +1,6 @@
 const Quiz = require('../models/Quiz');
 const Attempt = require('../models/Attempt');
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -183,12 +184,13 @@ exports.getQuizById = async (req, res) => {
     // Simple, fast query with lean() and very short timeout
     let quiz;
     try {
+      const quizObjectId = new mongoose.Types.ObjectId(quizId);
       quiz = await withTimeout(
-        Quiz.findById(quizId)
-          .lean()
-          .maxTimeMS(10000)
-          .exec(),
-        11000,
+        Quiz.collection.findOne(
+          { _id: quizObjectId },
+          { maxTimeMS: 8000 }
+        ),
+        9000,
         'Get quiz'
       );
     } catch (mongoError) {
@@ -309,11 +311,11 @@ exports.updateQuiz = async (req, res) => {
 exports.deleteQuiz = async (req, res) => {
   try {
     const result = await withTimeout(
-      Quiz.deleteOne({
-        _id: req.params.id,
-        createdBy: req.user._id
-      }),
-      12000,
+      Quiz.collection.deleteOne({
+        _id: new mongoose.Types.ObjectId(req.params.id),
+        createdBy: new mongoose.Types.ObjectId(req.user._id)
+      }, { maxTimeMS: 8000 }),
+      10000,
       'Delete quiz'
     );
 
@@ -339,10 +341,11 @@ exports.togglePublish = async (req, res) => {
     console.log(`📄 Request body:`, req.body);
     
     const result = await withTimeout(
-      Quiz.updateOne(
-        { _id: req.params.id, createdBy: req.user._id },
-        { $set: { isPublished: req.body.isPublished } }
-      ).maxTimeMS(8000),
+      Quiz.collection.updateOne(
+        { _id: new mongoose.Types.ObjectId(req.params.id), createdBy: new mongoose.Types.ObjectId(req.user._id) },
+        { $set: { isPublished: req.body.isPublished } },
+        { maxTimeMS: 8000 }
+      ),
       10000,
       'Publish quiz'
     );
@@ -497,14 +500,11 @@ exports.verifyQuizPassword = async (req, res) => {
 exports.duplicateQuiz = async (req, res) => {
   try {
     const originalQuiz = await withTimeout(
-      Quiz.findOne({
-        _id: req.params.id,
-        createdBy: req.user._id
-      })
-        .select('title description duration maxAttempts questions password hasPassword allowReview showCorrectAnswers randomizeQuestions randomizeOptions passingScore')
-        .lean()
-        .maxTimeMS(10000),
-      12000,
+      Quiz.collection.findOne(
+        { _id: new mongoose.Types.ObjectId(req.params.id), createdBy: new mongoose.Types.ObjectId(req.user._id) },
+        { projection: { title: 1, description: 1, duration: 1, maxAttempts: 1, questions: 1, password: 1, hasPassword: 1, allowReview: 1, showCorrectAnswers: 1, randomizeQuestions: 1, randomizeOptions: 1, passingScore: 1 }, maxTimeMS: 8000 }
+      ),
+      10000,
       'Duplicate quiz'
     );
 
