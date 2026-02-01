@@ -436,13 +436,6 @@ const TakeQuiz = ({ user }) => {
         response: answers[question._id || idx] || ''
       }))
 
-// Debug log removed
-        attemptId: attemptId,
-        answers: answersArray,
-        totalQuestions: quiz.questions.length,
-        answeredCount: answersArray.filter(a => a.response).length
-      })
-
       const response = await api.post(
         '/attempts/submit',
         { 
