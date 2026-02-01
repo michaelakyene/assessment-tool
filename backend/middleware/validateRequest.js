@@ -92,6 +92,16 @@ const validateQuizCreate = [
     .isInt({ min: 0, max: 100 })
     .withMessage('Passing score must be between 0 and 100'),
   
+  body('scheduledPublish')
+    .optional({ nullable: true, checkFalsy: true })
+    .isISO8601()
+    .withMessage('Scheduled publish must be a valid date'),
+  
+  body('deadline')
+    .optional({ nullable: true, checkFalsy: true })
+    .isISO8601()
+    .withMessage('Deadline must be a valid date'),
+  
   body('questions')
     .isArray({ min: 1, max: 100 })
     .withMessage('Quiz must have between 1 and 100 questions'),
