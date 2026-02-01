@@ -10,7 +10,6 @@ require('dotenv').config();
 
 const validateEnv = require('./config/validateEnv');
 const sanitizeInput = require('./middleware/sanitizeInput');
-const queryTimeout = require('./middleware/queryTimeout');
 
 const authRoutes = require('./routes/authRoutes');
 const quizRoutes = require('./routes/quizRoutes');
@@ -81,9 +80,6 @@ app.use((req, res, next) => {
   res.on('close', () => clearTimeout(timeout));
   next();
 });
-
-// Query timeout middleware
-app.use(queryTimeout);
 
 // Rate limiting - Global
 const limiter = rateLimit({
