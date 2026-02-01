@@ -11,7 +11,6 @@ module.exports = {
     activeQuizzes.get(quizId).add(userId);
     
     socket.to(room).emit('student-joined', { userId });
-    console.log(`User ${userId} joined quiz ${quizId}`);
   },
 
   leaveQuiz: (socket, { quizId, userId }) => {

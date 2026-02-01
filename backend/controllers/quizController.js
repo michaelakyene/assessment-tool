@@ -70,8 +70,11 @@ exports.createQuiz = async (req, res) => {
     if (!title || !title.trim()) {
       return res.status(400).json({ message: 'Quiz title is required' });
     }
-    if (!duration || duration < 1) {
-      return res.status(400).json({ message: 'Duration must be at least 1 minute' });
+    if (!duration || duration < 1 || duration > 180) {
+      return res.status(400).json({ message: 'Duration must be between 1 and 180 minutes' });
+    }
+    if (maxAttempts && maxAttempts < 1) {
+      return res.status(400).json({ message: 'Max attempts must be at least 1' });
     }
     if (!questions || !Array.isArray(questions) || questions.length === 0) {
       return res.status(400).json({ message: 'At least one question is required' });
@@ -250,6 +253,20 @@ exports.getQuizById = async (req, res) => {
 // Update quiz
 exports.updateQuiz = async (req, res) => {
   try {
+    // Validate input if provided
+    if (req.body.title !== undefined && (!req.body.title || !req.body.title.trim())) {
+      return res.status(400).json({ message: 'Quiz title cannot be empty' });
+    }
+    if (req.body.duration !== undefined && (req.body.duration < 1 || req.body.duration > 180)) {
+      return res.status(400).json({ message: 'Duration must be between 1 and 180 minutes' });
+    }
+    if (req.body.maxAttempts !== undefined && req.body.maxAttempts < 1) {
+      return res.status(400).json({ message: 'Max attempts must be at least 1' });
+    }
+    if (Array.isArray(req.body.questions) && req.body.questions.length === 0) {
+      return res.status(400).json({ message: 'At least one question is required' });
+    }
+
     const updateData = { ...req.body, updatedAt: Date.now() };
 
     if (Array.isArray(req.body.questions)) {

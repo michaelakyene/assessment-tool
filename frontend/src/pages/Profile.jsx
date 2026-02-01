@@ -8,6 +8,8 @@ const Profile = ({ user }) => {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [profileImage, setProfileImage] = useState(null)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
   const fileInputRef = useRef(null)
   
   const [formData, setFormData] = useState({
@@ -49,14 +51,15 @@ const Profile = ({ user }) => {
   }
 
   const handleSaveProfile = async () => {
+    setSavingProfile(true)
     try {
       // API call to update profile
-      console.log('Saving profile:', formData)
       alert('Profile updated successfully!')
       setIsEditing(false)
     } catch (error) {
-      console.error('Failed to update profile:', error)
       alert('Failed to update profile')
+    } finally {
+      setSavingProfile(false)
     }
   }
 
@@ -69,15 +72,16 @@ const Profile = ({ user }) => {
       alert('Password must be at least 6 characters long!')
       return
     }
+    setChangingPassword(true)
     try {
       // API call to change password
-      console.log('Changing password')
       alert('Password changed successfully!')
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
       setShowPasswordChange(false)
     } catch (error) {
-      console.error('Failed to change password:', error)
       alert('Failed to change password')
+    } finally {
+      setChangingPassword(false)
     }
   }
 
@@ -132,10 +136,11 @@ const Profile = ({ user }) => {
                 <div className="flex space-x-2">
                   <button
                     onClick={handleSaveProfile}
-                    className="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors font-medium flex items-center space-x-2"
+                    disabled={savingProfile}
+                    className="bg-white text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <FiSave className="w-4 h-4" />
-                    <span>Save</span>
+                    <span>{savingProfile ? 'Saving...' : 'Save'}</span>
                   </button>
                   <button
                     onClick={() => {
@@ -307,10 +312,11 @@ const Profile = ({ user }) => {
               <div className="flex space-x-3 pt-4">
                 <button
                   onClick={handleChangePassword}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2"
+                  disabled={changingPassword}
+                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <FiSave className="w-4 h-4" />
-                  <span>Update Password</span>
+                  <span>{changingPassword ? 'Updating...' : 'Update Password'}</span>
                 </button>
                 <button
                   onClick={() => {

@@ -50,7 +50,7 @@ const QuizAnalytics = () => {
       if (error.code === 'ECONNABORTED' || error.message === 'Request timeout') {
         // Timeout error - retry up to 2 times
         if (retry < 2) {
-          console.log(`Retrying analytics load (attempt ${retry + 1})...`)
+// Debug log removed
           await new Promise(resolve => setTimeout(resolve, 1000 * (retry + 1)))
           return loadAnalytics(retry + 1)
         }

@@ -24,7 +24,7 @@ if (rootElement) {
       </React.StrictMode>
     )
     
-    console.log('✅ Student Assessment System loaded successfully')
+// Debug log removed
   } catch (error) {
     console.error('❌ Error loading application:', error)
   }

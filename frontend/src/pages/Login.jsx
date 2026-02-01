@@ -51,12 +51,12 @@ const Login = ({ login }) => {
       
       if (isLogin) {
         // Login
-        console.log('Attempting login with:', formData.email)
+// Debug log removed
         response = await loginAPI({
           email: formData.email,
           password: formData.password
         })
-        console.log('Login response:', response)
+// Debug log removed
       } else {
         // Register
         const registerData = {
@@ -69,9 +69,9 @@ const Login = ({ login }) => {
         if (formData.role === 'student' && formData.studentId) {
           registerData.studentId = formData.studentId
         }
-        console.log('Attempting registration with data:', registerData)
+// Debug log removed
         response = await registerAPI(registerData)
-        console.log('Registration response:', response)
+// Debug log removed
       }
       
       // Call the login prop to update app state
@@ -80,8 +80,6 @@ const Login = ({ login }) => {
       // Navigate to dashboard
       navigate('/')
     } catch (err) {
-      console.error('Auth error full:', err)
-      console.error('Auth error details:', JSON.stringify(err, null, 2))
       const errorMessage = err.message || err.error || 'Authentication failed. Please try again.'
       setError(errorMessage)
     } finally {

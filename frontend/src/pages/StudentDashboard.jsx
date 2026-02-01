@@ -21,14 +21,8 @@ const StudentDashboard = ({ user }) => {
       setLoading(true)
       setError('')
       
-      console.log('🔄 Loading student dashboard data...')
-      console.log('🔑 Token exists:', !!localStorage.getItem('token'))
-      console.log('👤 User:', user)
-      
       // Fetch available quizzes
       const quizzesResponse = await api.get('/quizzes/available')
-      
-      console.log('✅ Quizzes loaded:', quizzesResponse.quizzes?.length || 0)
       
       // Set quizzes (already filtered as published on backend)
       setQuizzes(quizzesResponse.quizzes || [])
@@ -36,17 +30,12 @@ const StudentDashboard = ({ user }) => {
       // Fetch my attempts
       try {
         const attemptsResponse = await api.get('/attempts/user')
-        console.log('✅ Attempts loaded:', attemptsResponse.attempts?.length || 0)
         setAttempts(attemptsResponse.attempts || [])
       } catch (attemptError) {
-        console.log('⚠️ No attempts yet or error fetching attempts:', attemptError?.message || attemptError)
         setAttempts([])
       }
       
-      console.log('✅ Dashboard data loaded successfully')
-      
     } catch (error) {
-      console.error('❌ Failed to load dashboard:', error)
       setError(error?.message || error?.error || error || 'Failed to load dashboard')
     } finally {
       setLoading(false)

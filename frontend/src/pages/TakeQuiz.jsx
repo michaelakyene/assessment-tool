@@ -187,7 +187,6 @@ const TakeQuiz = ({ user }) => {
             })
           }
         } catch (e) {
-          console.error('Failed to restore progress:', e)
         }
       }
     }
@@ -233,7 +232,6 @@ const TakeQuiz = ({ user }) => {
       setAttemptId(newAttemptId)
       return newAttemptId
     } catch (err) {
-      console.error('Failed to start attempt:', err)
       setError('Unable to initialize your attempt. Please refresh and try again.')
       return null
     } finally {
@@ -307,7 +305,6 @@ const TakeQuiz = ({ user }) => {
       await ensureAttemptId()
       
     } catch (error) {
-      console.error('Failed to load quiz:', error)
       if (error?.requiresPassword) {
         setShowPasswordModal(true)
         setError('')
@@ -367,7 +364,6 @@ const TakeQuiz = ({ user }) => {
       await ensureAttemptId()
 
     } catch (err) {
-      console.error('Password verification error:', err)
       setToast({
         message: 'Incorrect password. Please try again.',
         type: 'error'
@@ -440,7 +436,7 @@ const TakeQuiz = ({ user }) => {
         response: answers[question._id || idx] || ''
       }))
 
-      console.log('Submitting answers:', {
+// Debug log removed
         attemptId: attemptId,
         answers: answersArray,
         totalQuestions: quiz.questions.length,
@@ -455,7 +451,7 @@ const TakeQuiz = ({ user }) => {
         }
       )
 
-      console.log('Submission successful:', response.data)
+// Debug log removed
       
       const attemptData = response.data
       
@@ -467,7 +463,6 @@ const TakeQuiz = ({ user }) => {
       navigate(`/results/${attemptId}`)
       
     } catch (error) {
-      console.error('Submission error:', error)
       
       const errorMsg = error?.message || error?.error || error || 'Failed to submit quiz. Please try again.'
       

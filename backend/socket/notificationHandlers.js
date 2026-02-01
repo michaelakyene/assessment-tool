@@ -7,8 +7,6 @@ module.exports = {
       socket.userId = userId;
       socket.join(`user-${userId}`);
       
-      console.log(`User ${userId} subscribed to notifications`);
-      
       // Send unread notifications
       const notifications = await Notification.find({
         user: userId,
@@ -19,16 +17,13 @@ module.exports = {
         socket.emit('notifications', notifications);
       }
     } catch (error) {
-      console.error('Error subscribing to notifications:', error);
     }
   },
 
   markAsRead: async (socket, { notificationId }) => {
     try {
       await Notification.findByIdAndUpdate(notificationId, { read: true });
-      console.log(`Notification ${notificationId} marked as read`);
     } catch (error) {
-      console.error('Error marking notification as read:', error);
     }
   },
 
@@ -48,11 +43,8 @@ module.exports = {
       // Emit to specific user room
       io.to(`user-${userId}`).emit('new-notification', notification);
       
-      console.log(`Notification sent to user ${userId}: ${title}`);
-      
       return notification;
     } catch (error) {
-      console.error('Error sending notification:', error);
       throw error;
     }
   },
@@ -78,11 +70,8 @@ module.exports = {
         io.to(`user-${userId}`).emit('new-notification', notification);
       }
       
-      console.log(`Bulk notifications sent to ${userIds.length} users: ${title}`);
-      
       return notifications;
     } catch (error) {
-      console.error('Error sending bulk notifications:', error);
       throw error;
     }
   }

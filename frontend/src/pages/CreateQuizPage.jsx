@@ -49,9 +49,7 @@ const CreateQuizPage = () => {
   const loadQuiz = async () => {
     try {
       setLoading(true)
-      console.log(`📚 Loading quiz: ${id}`)
       const data = await getQuizById(id)
-      console.log(`✅ Quiz loaded successfully`)
       const mappedQuestions = (data.quiz.questions || []).map((q) => ({
         type: q.type === 'mcq' ? 'multiple_choice' : q.type,
         questionText: q.questionText || q.text || '',

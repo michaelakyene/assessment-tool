@@ -11,7 +11,6 @@ module.exports = (server) => {
   });
 
   io.on('connection', (socket) => {
-    console.log('New client connected:', socket.id);
 
     // Quiz room handlers
     socket.on('join-quiz', (data) => quizHandlers.joinQuiz(socket, data));
@@ -24,7 +23,6 @@ module.exports = (server) => {
     socket.on('mark-read', (data) => notificationHandlers.markAsRead(socket, data));
 
     socket.on('disconnect', () => {
-      console.log('Client disconnected:', socket.id);
       quizHandlers.handleDisconnect(socket);
     });
   });
