@@ -4,19 +4,6 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const withTimeout = (promise, ms, label) => {
-  let timer;
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => {
-      const error = new Error(`${label} timeout`);
-      error.code = 'QUERY_TIMEOUT';
-      reject(error);
-    }, ms);
-  });
-
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-};
-
 const sanitizeQuizForStudent = (quiz) => {
   if (!quiz) return quiz;
   const quizObj = quiz.toObject ? quiz.toObject() : { ...quiz };
@@ -181,21 +168,17 @@ exports.getQuizById = async (req, res) => {
       return res.status(400).json({ message: 'Invalid quiz ID format' });
     }
     
-    // Simple, fast query with lean() and very short timeout
+    // Query with proper MongoDB timeout handling
     let quiz;
     try {
       const quizObjectId = new mongoose.Types.ObjectId(quizId);
-      quiz = await withTimeout(
-        Quiz.collection.findOne(
-          { _id: quizObjectId },
-          { maxTimeMS: 8000 }
-        ),
-        9000,
-        'Get quiz'
+      quiz = await Quiz.collection.findOne(
+        { _id: quizObjectId },
+        { maxTimeMS: 15000 }
       );
     } catch (mongoError) {
       console.error(`❌ MongoDB error for quiz ${quizId}:`, mongoError.message);
-      if (mongoError.code === 'QUERY_TIMEOUT' || mongoError.message.includes('timeout')) {
+      if (mongoError.message.includes('maxTimeMS') || mongoError.message.includes('timeout')) {
         return res.status(504).json({
           message: 'Database query timeout - quiz may be too large or busy',
           code: 'QUERY_TIMEOUT'
@@ -284,14 +267,10 @@ exports.updateQuiz = async (req, res) => {
       }
     }
 
-    const quiz = await withTimeout(
-      Quiz.findOneAndUpdate(
-        { _id: req.params.id, createdBy: req.user._id },
-        { $set: updateData },
-        { new: true, runValidators: true }
-      ),
-      12000,
-      'Update quiz'
+    const quiz = await Quiz.findOneAndUpdate(
+      { _id: req.params.id, createdBy: req.user._id },
+      { $set: updateData },
+      { new: true, runValidators: true, maxTimeMS: 15000 }
     );
 
     if (!quiz) {
@@ -310,14 +289,10 @@ exports.updateQuiz = async (req, res) => {
 // Delete quiz
 exports.deleteQuiz = async (req, res) => {
   try {
-    const result = await withTimeout(
-      Quiz.collection.deleteOne({
-        _id: new mongoose.Types.ObjectId(req.params.id),
-        createdBy: new mongoose.Types.ObjectId(req.user._id)
-      }, { maxTimeMS: 8000 }),
-      10000,
-      'Delete quiz'
-    );
+    const result = await Quiz.collection.deleteOne({
+      _id: new mongoose.Types.ObjectId(req.params.id),
+      createdBy: new mongoose.Types.ObjectId(req.user._id)
+    }, { maxTimeMS: 15000 });
 
     if (!result || result.deletedCount === 0) {
       return res.status(404).json({ message: 'Quiz not found or unauthorized' });
@@ -340,14 +315,10 @@ exports.togglePublish = async (req, res) => {
     console.log(`🔄 Toggling publish for quiz: ${req.params.id}`);
     console.log(`📄 Request body:`, req.body);
     
-    const result = await withTimeout(
-      Quiz.collection.updateOne(
-        { _id: new mongoose.Types.ObjectId(req.params.id), createdBy: new mongoose.Types.ObjectId(req.user._id) },
-        { $set: { isPublished: req.body.isPublished } },
-        { maxTimeMS: 8000 }
-      ),
-      10000,
-      'Publish quiz'
+    const result = await Quiz.collection.updateOne(
+      { _id: new mongoose.Types.ObjectId(req.params.id), createdBy: new mongoose.Types.ObjectId(req.user._id) },
+      { $set: { isPublished: req.body.isPublished } },
+      { maxTimeMS: 15000 }
     );
     
     console.log(`📦 Quiz found and updated:`, result?.modifiedCount > 0 ? 'Yes' : 'No');
@@ -499,13 +470,9 @@ exports.verifyQuizPassword = async (req, res) => {
 // Duplicate quiz
 exports.duplicateQuiz = async (req, res) => {
   try {
-    const originalQuiz = await withTimeout(
-      Quiz.collection.findOne(
-        { _id: new mongoose.Types.ObjectId(req.params.id), createdBy: new mongoose.Types.ObjectId(req.user._id) },
-        { projection: { title: 1, description: 1, duration: 1, maxAttempts: 1, questions: 1, password: 1, hasPassword: 1, allowReview: 1, showCorrectAnswers: 1, randomizeQuestions: 1, randomizeOptions: 1, passingScore: 1 }, maxTimeMS: 8000 }
-      ),
-      10000,
-      'Duplicate quiz'
+    const originalQuiz = await Quiz.collection.findOne(
+      { _id: new mongoose.Types.ObjectId(req.params.id), createdBy: new mongoose.Types.ObjectId(req.user._id) },
+      { projection: { title: 1, description: 1, duration: 1, maxAttempts: 1, questions: 1, password: 1, hasPassword: 1, allowReview: 1, showCorrectAnswers: 1, randomizeQuestions: 1, randomizeOptions: 1, passingScore: 1 }, maxTimeMS: 15000 }
     );
 
     if (!originalQuiz) {
