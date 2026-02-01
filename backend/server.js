@@ -18,6 +18,7 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const swaggerSpec = require('./swagger/swaggerConfig');
 const swaggerUi = require('swagger-ui-express');
 const socketServer = require('./socket/socketServer');
+const schedulerService = require('./services/schedulerService');
 
 // Validate environment variables
 try {
@@ -145,7 +146,11 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/assessmen
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('✅ MongoDB connected successfully'))
+.then(() => {
+  console.log('✅ MongoDB connected successfully');
+  // Start the scheduler service after DB connection
+  schedulerService.start();
+})
 .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // Error handling

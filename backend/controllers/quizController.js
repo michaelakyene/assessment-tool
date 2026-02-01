@@ -114,6 +114,9 @@ exports.createQuiz = async (req, res) => {
       ? await bcrypt.hash(password, 10)
       : null;
 
+    // Auto-set isPublished based on scheduledPublish
+    const shouldPublish = !scheduledPublish || new Date(scheduledPublish) <= new Date();
+
     const quiz = new Quiz({
       title,
       description,
@@ -121,7 +124,7 @@ exports.createQuiz = async (req, res) => {
       maxAttempts,
       questions: transformedQuestions,
       createdBy: req.user._id,
-      isPublished: false,
+      isPublished: shouldPublish,
       password: hasPassword ? hashedPassword : null,
       hasPassword: hasPassword || false,
       allowReview: allowReview !== undefined ? allowReview : true,
@@ -299,6 +302,18 @@ exports.updateQuiz = async (req, res) => {
     }
 
     const updateData = { ...req.body, updatedAt: Date.now() };
+
+    // Auto-adjust isPublished based on scheduledPublish
+    if (req.body.scheduledPublish !== undefined) {
+      const scheduledTime = new Date(req.body.scheduledPublish);
+      const now = new Date();
+      
+      // If scheduledPublish is in the future, set isPublished to false
+      // If scheduledPublish is in the past or now, keep current publish state
+      if (scheduledTime > now) {
+        updateData.isPublished = false;
+      }
+    }
 
     if (Array.isArray(req.body.questions)) {
       updateData.questions = req.body.questions.map((q) => ({
