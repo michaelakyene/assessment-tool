@@ -19,20 +19,20 @@ const { validateQuizCreate, validateMongoId } = require('../middleware/validateR
 
 // Student routes (specific endpoints first)
 router.get('/available', authMiddleware, getAvailableQuizzes);
-router.post('/:id/verify-password', authMiddleware, validateMongoId, verifyQuizPassword);
+router.post('/:id/verify-password', authMiddleware, ...validateMongoId(), verifyQuizPassword);
 
 // Lecturer routes (specific endpoints)
 router.get('/lecturer', authMiddleware, roleMiddleware('lecturer'), getLecturerQuizzes);
-router.get('/lecturer/:id', authMiddleware, roleMiddleware('lecturer'), validateMongoId, getQuizById);
-router.post('/:id/duplicate', authMiddleware, roleMiddleware('lecturer'), validateMongoId, duplicateQuiz);
-router.get('/:id/results', authMiddleware, roleMiddleware('lecturer'), validateMongoId, getQuizResults);
-router.patch('/:id/publish', authMiddleware, roleMiddleware('lecturer'), validateMongoId, togglePublish);
+router.get('/lecturer/:id', authMiddleware, roleMiddleware('lecturer'), ...validateMongoId(), getQuizById);
+router.post('/:id/duplicate', authMiddleware, roleMiddleware('lecturer'), ...validateMongoId(), duplicateQuiz);
+router.get('/:id/results', authMiddleware, roleMiddleware('lecturer'), ...validateMongoId(), getQuizResults);
+router.patch('/:id/publish', authMiddleware, roleMiddleware('lecturer'), ...validateMongoId(), togglePublish);
 
 // Generic routes (MUST come last)
 router.post('/', authMiddleware, roleMiddleware('lecturer'), validateQuizCreate, createQuiz);
-router.put('/:id', authMiddleware, roleMiddleware('lecturer'), validateMongoId, validateQuizCreate, updateQuiz);
-router.delete('/:id', authMiddleware, roleMiddleware('lecturer'), validateMongoId, deleteQuiz);
-router.get('/:id', authMiddleware, validateMongoId, getQuizById);
+router.put('/:id', authMiddleware, roleMiddleware('lecturer'), ...validateMongoId(), validateQuizCreate, updateQuiz);
+router.delete('/:id', authMiddleware, roleMiddleware('lecturer'), ...validateMongoId(), deleteQuiz);
+router.get('/:id', authMiddleware, ...validateMongoId(), getQuizById);
 
 // Export router
 module.exports = router;

@@ -16,7 +16,15 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path
+        rewrite: (path) => path,
+        logLevel: 'info',
+        ws: true,
+        onProxyReq: (proxyReq, req, res) => {
+          console.log(`🔄 Vite Proxy: ${req.method} ${req.url} -> ${proxyReq.getHeader('host')}`)
+        },
+        onProxyRes: (proxyRes, req, res) => {
+          console.log(`✅ Vite Proxy Response: ${proxyRes.statusCode} for ${req.url}`)
+        }
       }
     }
   },
