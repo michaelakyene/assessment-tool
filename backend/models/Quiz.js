@@ -111,8 +111,8 @@ quizSchema.pre('save', function(next) {
 });
 
 // Add indexes for better query performance
-quizSchema.index({ createdBy: 1 });
-quizSchema.index({ isPublished: 1 });
-quizSchema.index({ createdAt: -1 });
+quizSchema.index({ createdBy: 1, createdAt: -1 }); // Compound index for lecturer queries
+quizSchema.index({ isPublished: 1, deadline: 1 }); // For student available quizzes
+quizSchema.index({ _id: 1, createdBy: 1 }); // For quick owner verification
 
 module.exports = mongoose.model('Quiz', quizSchema);

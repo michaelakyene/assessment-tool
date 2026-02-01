@@ -12,7 +12,7 @@ module.exports = (req, res, next) => {
         code: 'REQUEST_TIMEOUT'
       });
     }
-  }, 18000); // 18 second timeout for DB queries (Heroku has 30s limit)
+  }, 26000); // 26 second timeout for DB queries (Heroku has 30s limit)
   
   req.queryTimeout = timeout;
   req.abortSignal = abortController.signal;

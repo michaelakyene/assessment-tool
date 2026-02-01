@@ -147,7 +147,7 @@ exports.getLecturerQuizzes = async (req, res) => {
     const quizzes = await Quiz.find({ createdBy: req.user._id })
       .sort({ createdAt: -1 })
       .select('-password')
-      .populate('createdBy', 'name email');
+      .lean();
 
     res.json({ quizzes });
   } catch (error) {
@@ -172,14 +172,14 @@ exports.getQuizById = async (req, res) => {
     try {
       quiz = await Quiz.findById(quizId)
         .lean()
-        .maxTimeMS(5000)
+        .maxTimeMS(15000)
         .exec();
     } catch (mongoError) {
       console.error(`❌ MongoDB error for quiz ${quizId}:`, mongoError.message);
       
       // If timeout, try count first to see if quiz even exists
       try {
-        const exists = await Quiz.countDocuments({ _id: quizId }).maxTimeMS(5000);
+        const exists = await Quiz.countDocuments({ _id: quizId }).maxTimeMS(10000);
         if (!exists) {
           return res.status(404).json({ message: 'Quiz not found' });
         }
