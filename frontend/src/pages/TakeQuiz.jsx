@@ -446,7 +446,7 @@ const TakeQuiz = ({ user }) => {
 
 // Debug log removed
       
-      const attemptData = response.data
+      const attemptData = response
       
       // Clear saved progress from localStorage
       const storageKey = `quiz_${id}_attempt_${attemptId}`

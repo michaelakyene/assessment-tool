@@ -334,49 +334,49 @@ const EnhancedLecturerDashboard = ({ user }) => {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200">
+                      <div className="flex flex-col gap-2 pt-4 border-t border-gray-200 sm:grid sm:grid-cols-2 md:flex md:flex-row md:flex-wrap">
                         <button
                           onClick={() => handleEditQuiz(quiz)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2 text-sm font-medium"
+                          className="w-full md:w-auto px-3 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 flex items-center justify-center gap-2 text-sm font-medium transition-colors"
                         >
-                          <FiEdit className="w-4 h-4" />
-                          <span>Edit</span>
+                          <FiEdit className="w-4 h-4 flex-shrink-0" />
+                          <span className="whitespace-nowrap">Edit</span>
                         </button>
                         
                         <button
                           onClick={() => handleTogglePublish(quiz)}
-                          className={`px-4 py-2 rounded-lg flex items-center space-x-2 text-sm font-medium ${
+                          className={`w-full md:w-auto px-3 py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-colors ${
                             quiz.isPublished
-                              ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                              : 'bg-green-600 text-white hover:bg-green-700'
+                              ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 active:bg-gray-400'
+                              : 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
                           }`}
                         >
-                          {quiz.isPublished ? <FiUnlock className="w-4 h-4" /> : <FiLock className="w-4 h-4" />}
-                          <span>{quiz.isPublished ? 'Unpublish' : 'Publish'}</span>
+                          {quiz.isPublished ? <FiUnlock className="w-4 h-4 flex-shrink-0" /> : <FiLock className="w-4 h-4 flex-shrink-0" />}
+                          <span className="whitespace-nowrap">{quiz.isPublished ? 'Unpublish' : 'Publish'}</span>
                         </button>
 
                         <button
                           onClick={() => handleDuplicateQuiz(quiz)}
-                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center space-x-2 text-sm font-medium"
+                          className="w-full md:w-auto px-3 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 active:bg-gray-400 flex items-center justify-center gap-2 text-sm font-medium transition-colors"
                         >
-                          <FiCopy className="w-4 h-4" />
-                          <span>Duplicate</span>
+                          <FiCopy className="w-4 h-4 flex-shrink-0" />
+                          <span className="whitespace-nowrap">Duplicate</span>
                         </button>
 
                         <button
                           onClick={() => navigate(`/quiz/${quizId}/analytics`)}
-                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center space-x-2 text-sm font-medium"
+                          className="w-full md:w-auto px-3 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 active:bg-purple-800 flex items-center justify-center gap-2 text-sm font-medium transition-colors"
                         >
-                          <FiBarChart2 className="w-4 h-4" />
-                          <span>Analytics</span>
+                          <FiBarChart2 className="w-4 h-4 flex-shrink-0" />
+                          <span className="whitespace-nowrap">Analytics</span>
                         </button>
 
                         <button
                           onClick={() => handleDeleteQuiz(quizId)}
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center space-x-2 text-sm font-medium ml-auto"
+                          className="w-full md:w-auto px-3 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 active:bg-red-800 flex items-center justify-center gap-2 text-sm font-medium transition-colors md:ml-auto"
                         >
-                          <FiTrash2 className="w-4 h-4" />
-                          <span>Delete</span>
+                          <FiTrash2 className="w-4 h-4 flex-shrink-0" />
+                          <span className="whitespace-nowrap">Delete</span>
                         </button>
                       </div>
                     </div>

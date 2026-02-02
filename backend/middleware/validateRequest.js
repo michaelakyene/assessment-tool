@@ -85,8 +85,8 @@ const validateQuizCreate = [
     .withMessage('Duration must be between 1 and 300 minutes'),
   
   body('maxAttempts')
-    .isInt({ min: 1, max: 10 })
-    .withMessage('Max attempts must be between 1 and 10'),
+    .isInt({ min: 1, max: 50 })
+    .withMessage('Max attempts must be between 1 and 50'),
   
   body('passingScore')
     .isInt({ min: 0, max: 100 })

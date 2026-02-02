@@ -21,7 +21,7 @@ export const quizSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters').max(100),
   description: z.string().max(500).optional(),
   duration: z.number().min(1).max(180),
-  maxAttempts: z.number().min(1).max(10),
+  maxAttempts: z.number().min(1).max(50),
   isPublished: z.boolean().default(false),
   showResults: z.boolean().default(false)
 });
