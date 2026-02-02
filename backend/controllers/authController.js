@@ -71,7 +71,7 @@ exports.register = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        indexNumber: user.studentId
+        studentId: user.studentId
       },
       token,
       expiresIn: process.env.JWT_EXPIRES_IN || '1h'
@@ -121,7 +121,7 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        indexNumber: user.studentId
+        studentId: user.studentId
       },
       token,
       expiresIn: process.env.JWT_EXPIRES_IN || '1h'

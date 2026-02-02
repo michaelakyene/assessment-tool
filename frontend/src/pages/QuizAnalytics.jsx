@@ -249,18 +249,18 @@ const QuizAnalytics = () => {
                 {analytics.attempts?.slice(0, 10).map((attempt) => (
                   <div 
                     key={attempt._id} 
-                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all gap-3"
                   >
-                    <div className="flex items-center space-x-4 flex-1">
-                      <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center text-white font-bold shadow-sm">
+                    <div className="flex items-center space-x-4 flex-1 min-w-0">
+                      <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center text-white font-bold shadow-sm flex-shrink-0">
                         {attempt.student?.name?.charAt(0) || 'S'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900">
+                        <p className="text-sm font-semibold text-gray-900 truncate">
                           {attempt.student?.name || 'Anonymous Student'}
                         </p>
-                        <div className="flex items-center space-x-2 text-xs text-gray-600">
-                          <span className="font-medium">Index: {attempt.student?.indexNumber || 'N/A'}</span>
+                        <div className="flex items-center flex-wrap gap-x-2 text-xs text-gray-600">
+                          <span className="font-medium">Index: {attempt.student?.studentId || 'N/A'}</span>
                           <span>•</span>
                           <span>{new Date(attempt.submittedAt).toLocaleDateString()}</span>
                           {attempt.timeTaken && (
@@ -272,7 +272,7 @@ const QuizAnalytics = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-4">
+                    <div className="flex items-center justify-between sm:justify-end space-x-4 flex-shrink-0">
                       <div className="text-right">
                         <p className={`text-lg font-bold ${
                           attempt.percentage >= (quiz.passingScore || 50) 
@@ -281,11 +281,11 @@ const QuizAnalytics = () => {
                         }`}>
                           {attempt.percentage.toFixed(1)}%
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 whitespace-nowrap">
                           {attempt.score}/{attempt.totalMarks} points
                         </p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
                         attempt.percentage >= (quiz.passingScore || 50)
                           ? 'bg-green-100 text-green-700'
                           : 'bg-red-100 text-red-700'

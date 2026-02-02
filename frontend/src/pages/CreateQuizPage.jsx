@@ -338,20 +338,20 @@ const CreateQuizPage = () => {
         </div>
 
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center space-x-3 sm:space-x-4">
               <button
                 onClick={() => navigate('/')}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
               >
-                <FiArrowLeft className="w-6 h-6 text-gray-600" />
+                <FiArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
               </button>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
                   {isEditing ? 'Edit Quiz' : 'Create New Quiz'}
                 </h1>
-                <p className="text-gray-600 mt-1">
+                <p className="text-sm sm:text-base text-gray-600 mt-1">
                   {isEditing ? 'Update your quiz details' : 'Fill in the details to create a new quiz'}
                 </p>
               </div>
@@ -359,10 +359,10 @@ const CreateQuizPage = () => {
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 flex items-center space-x-2 transition-colors disabled:opacity-50"
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center space-x-2 transition-colors disabled:opacity-50 flex-shrink-0"
             >
               <FiSave className="w-5 h-5" />
-              <span>{loading ? 'Saving...' : isEditing ? 'Update Quiz' : 'Save Quiz'}</span>
+              <span className="whitespace-nowrap">{loading ? 'Saving...' : isEditing ? 'Update Quiz' : 'Save Quiz'}</span>
             </button>
           </div>
         </div>
@@ -440,7 +440,7 @@ const CreateQuizPage = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Duration (minutes)
@@ -485,7 +485,7 @@ const CreateQuizPage = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Scheduled Publish
@@ -795,26 +795,28 @@ const CreateQuizPage = () => {
                         </label>
                         <div className="space-y-2">
                           {currentQuestion.options.map((option, index) => (
-                            <div key={index} className="flex items-center space-x-2">
-                              <input
-                                type="radio"
-                                name="correctAnswer"
-                                value={option}
-                                checked={currentQuestion.correctAnswer === option}
-                                onChange={handleQuestionChange}
-                                className="w-4 h-4 text-blue-600"
-                              />
-                              <input
-                                type="text"
-                                value={option}
-                                onChange={(e) => handleOptionChange(index, e.target.value)}
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder={`Option ${index + 1}`}
-                              />
+                            <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-2">
+                              <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                <input
+                                  type="radio"
+                                  name="correctAnswer"
+                                  value={option}
+                                  checked={currentQuestion.correctAnswer === option}
+                                  onChange={handleQuestionChange}
+                                  className="w-4 h-4 text-blue-600 flex-shrink-0"
+                                />
+                                <input
+                                  type="text"
+                                  value={option}
+                                  onChange={(e) => handleOptionChange(index, e.target.value)}
+                                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-0"
+                                  placeholder={`Option ${index + 1}`}
+                                />
+                              </div>
                               {currentQuestion.options.length > 2 && (
                                 <button
                                   onClick={() => removeOption(index)}
-                                  className="text-red-600 hover:text-red-800 p-2"
+                                  className="text-red-600 hover:text-red-800 p-2 self-end sm:self-center flex-shrink-0"
                                 >
                                   <FiTrash2 className="w-4 h-4" />
                                 </button>
@@ -938,7 +940,7 @@ const CreateQuizPage = () => {
 
         {/* Footer Actions */}
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <button
               onClick={() => navigate('/')}
               className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
@@ -948,7 +950,7 @@ const CreateQuizPage = () => {
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 flex items-center space-x-2 transition-colors disabled:opacity-50"
+              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center space-x-2 transition-colors disabled:opacity-50"
             >
               <FiSave className="w-5 h-5" />
               <span>{loading ? 'Saving...' : isEditing ? 'Update Quiz' : 'Save Quiz'}</span>

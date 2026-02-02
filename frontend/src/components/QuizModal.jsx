@@ -216,7 +216,7 @@ const QuizModal = ({ isOpen, onClose, onSave, quiz = null }) => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Duration (minutes) *
@@ -503,19 +503,19 @@ const QuizModal = ({ isOpen, onClose, onSave, quiz = null }) => {
                         </button>
                       </div>
                       {currentQuestion.options.map((opt, index) => (
-                        <div key={index} className="flex items-center space-x-2 mb-2">
+                        <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
                           <input
                             type="text"
                             value={opt}
                             onChange={(e) => handleOptionChange(index, e.target.value)}
                             placeholder={`Option ${index + 1}`}
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-0"
                           />
                           {currentQuestion.options.length > 2 && (
                             <button
                               type="button"
                               onClick={() => removeOption(index)}
-                              className="text-red-600 hover:text-red-700"
+                              className="text-red-600 hover:text-red-700 p-2 self-end sm:self-center flex-shrink-0"
                             >
                               <FiTrash2 />
                             </button>
