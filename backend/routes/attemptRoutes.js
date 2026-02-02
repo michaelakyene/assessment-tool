@@ -15,7 +15,7 @@ router.post('/start', authMiddleware, startAttempt);
 router.post('/submit', authMiddleware, validateAttemptSubmit, submitAttempt);
 router.post('/timeout', authMiddleware, timeoutAttempt);
 router.get('/user', authMiddleware, getUserAttempts);
-router.get('/:id', authMiddleware, validateMongoId, getAttempt);
+router.get('/:id', authMiddleware, ...validateMongoId(), getAttempt);
 
 // Export router
 module.exports = router;
