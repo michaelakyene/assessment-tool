@@ -679,7 +679,7 @@ const CreateQuizPage = () => {
                                 ))}
                               </div>
                             )}
-                            {q.type !== 'mcq' && (
+                            {q.type !== 'multiple_choice' && (
                               <div className="mt-3 flex items-center space-x-2 text-sm">
                                 <span className="text-gray-600">Correct Answer:</span>
                                 <span className="font-medium text-green-600">{q.correctAnswer}</span>
@@ -824,7 +824,7 @@ const CreateQuizPage = () => {
                       </div>
                     )}
 
-                    {currentQuestion.type === 'true-false' && (
+                    {currentQuestion.type === 'true_false' && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Correct Answer
@@ -856,7 +856,7 @@ const CreateQuizPage = () => {
                       </div>
                     )}
 
-                    {currentQuestion.type === 'short-answer' && (
+                    {currentQuestion.type === 'short_answer' && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Correct Answer
