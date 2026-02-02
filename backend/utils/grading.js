@@ -31,10 +31,13 @@ const calculateScore = (questions, userAnswers) => {
         marksObtained = isCorrect ? question.marks : 0;
         break;
 
-      case 'true_false':
-        isCorrect = userAnswer.response === question.correctAnswer;
+      case 'true_false': {
+        const normalizedResponse = String(userAnswer.response || '').trim().toLowerCase();
+        const normalizedCorrect = String(question.correctAnswer || '').trim().toLowerCase();
+        isCorrect = normalizedResponse === normalizedCorrect;
         marksObtained = isCorrect ? question.marks : 0;
         break;
+      }
 
       case 'short_answer':
         // Case-insensitive comparison, trim whitespace

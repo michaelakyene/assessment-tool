@@ -456,13 +456,13 @@ exports.getAvailableQuizzes = async (req, res) => {
     .select('title description duration maxAttempts createdAt deadline hasPassword allowReview showCorrectAnswers passingScore scheduledPublish questions')
     .sort({ createdAt: -1 });
 
-    // Check COMPLETED attempts for each quiz
+    // Check COMPLETED and TIMEOUT attempts for each quiz
     const quizzesWithAttempts = await Promise.all(
       quizzes.map(async (quiz) => {
         const attemptCount = await Attempt.countDocuments({
           quiz: quiz._id,
           user: req.user._id,
-          status: 'completed'
+          status: { $in: ['completed', 'timeout'] }
         });
         
         const quizObj = quiz.toObject();

@@ -70,7 +70,7 @@ exports.startAttempt = async (req, res) => {
     const attemptCount = await Attempt.countDocuments({
       quiz: quizId,
       user: req.user._id,
-      status: 'completed'
+      status: { $in: ['completed', 'timeout'] }
     });
 
     if (attemptCount >= quiz.maxAttempts) {
@@ -208,8 +208,13 @@ exports.submitAttempt = async (req, res) => {
         let marksObtained = 0;
         const response = String(userAnswer.response).trim();
 
-        if (question.type === 'mcq' || question.type === 'true_false') {
+        if (question.type === 'mcq') {
           isCorrect = response === String(question.correctAnswer).trim();
+          marksObtained = isCorrect ? (question.marks || 0) : 0;
+        } else if (question.type === 'true_false') {
+          const normalizedResponse = response.toLowerCase();
+          const normalizedCorrect = String(question.correctAnswer).trim().toLowerCase();
+          isCorrect = normalizedResponse === normalizedCorrect;
           marksObtained = isCorrect ? (question.marks || 0) : 0;
         } else if (question.type === 'short_answer') {
           // Case-insensitive, trimmed comparison
