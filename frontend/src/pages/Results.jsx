@@ -10,6 +10,7 @@ const Results = ({ user }) => {
   const [attempt, setAttempt] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [attemptCount, setAttemptCount] = useState(0)
 
   useEffect(() => {
     loadResults()
@@ -20,6 +21,20 @@ const Results = ({ user }) => {
       setLoading(true)
       const data = await api.get(`/attempts/${attemptId}`)
       setAttempt(data.attempt)
+      
+      // Fetch attempt count for this quiz to check if retake is allowed
+      if (data.attempt?.quiz?._id || data.attempt?.quiz) {
+        const quizId = data.attempt.quiz._id || data.attempt.quiz
+        try {
+          const attemptsData = await api.get('/attempts/user')
+          const quizAttempts = attemptsData.attempts?.filter(
+            a => (a.quiz?._id || a.quiz) === quizId && a.status === 'completed'
+          )
+          setAttemptCount(quizAttempts?.length || 0)
+        } catch (err) {
+          console.warn('Could not fetch attempt count:', err)
+        }
+      }
     } catch (error) {
       console.error('Failed to load results:', error)
       setError(error?.message || error?.error || error || 'Failed to load results')
@@ -29,12 +44,14 @@ const Results = ({ user }) => {
   }
 
   const getLetterGrade = (percentage) => {
-    if (percentage >= 90) return 'A+'
     if (percentage >= 80) return 'A'
+    if (percentage >= 75) return 'B+'
     if (percentage >= 70) return 'B'
+    if (percentage >= 65) return 'C+'
     if (percentage >= 60) return 'C'
+    if (percentage >= 55) return 'D+'
     if (percentage >= 50) return 'D'
-    return 'F'
+    return 'E'
   }
 
   const formatTimeTaken = (seconds) => {
@@ -353,12 +370,21 @@ const Results = ({ user }) => {
           Back to Dashboard
         </button>
         <div className="flex space-x-4">
-          <button
-            onClick={() => navigate(`/quiz/${quiz.id}`)}
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-          >
-            Retake Quiz
-          </button>
+          {/* Only show retake button if attempts are remaining */}
+          {attemptCount < (quiz.maxAttempts || 1) && (
+            <button
+              onClick={() => navigate(`/quiz/${quiz._id || quiz.id}`)}
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+              Retake Quiz ({quiz.maxAttempts - attemptCount} attempt{quiz.maxAttempts - attemptCount !== 1 ? 's' : ''} remaining)
+            </button>
+          )}
+          {attemptCount >= (quiz.maxAttempts || 1) && (
+            <div className="px-6 py-2.5 bg-gray-100 text-gray-500 rounded-lg font-medium cursor-not-allowed flex items-center space-x-2">
+              <FiAlertCircle className="w-4 h-4" />
+              <span>All attempts used</span>
+            </div>
+          )}
           <button
             onClick={() => window.print()}
             className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"

@@ -114,6 +114,59 @@ const Toast = ({ message, type = 'error', onClose }) => {
   )
 }
 
+// Utility function to shuffle array (Fisher-Yates algorithm)
+const shuffleArray = (array) => {
+  const shuffled = [...array]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
+
+// Apply shuffle settings to quiz
+const applyShuffleSettings = (quizData) => {
+  const processed = { ...quizData }
+  
+  // Shuffle questions if enabled
+  if (quizData.randomizeQuestions) {
+    processed.questions = shuffleArray(quizData.questions)
+  }
+  
+  // Shuffle options for MCQ questions if enabled
+  if (quizData.randomizeOptions) {
+    processed.questions = processed.questions.map(question => {
+      if (question.type === 'mcq' && Array.isArray(question.options) && question.options.length > 0) {
+        // Store original correct answer
+        const correctAnswer = question.correctAnswer
+        
+        // Create array of options with their original indices
+        const optionsWithIndices = question.options.map((opt, idx) => ({
+          text: opt,
+          originalIndex: idx
+        }))
+        
+        // Shuffle the options
+        const shuffledOptions = shuffleArray(optionsWithIndices)
+        
+        // Find new position of correct answer
+        const correctIndex = shuffledOptions.findIndex(
+          opt => opt.originalIndex === parseInt(correctAnswer)
+        )
+        
+        return {
+          ...question,
+          options: shuffledOptions.map(opt => opt.text),
+          correctAnswer: correctIndex.toString()
+        }
+      }
+      return question
+    })
+  }
+  
+  return processed
+}
+
 const TakeQuiz = ({ user }) => {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -291,12 +344,15 @@ const TakeQuiz = ({ user }) => {
         return
       }
       
-      setQuiz(quizData)
-      setTimeLeft(quizData.duration * 60) // Convert minutes to seconds
+      // Apply shuffle settings (questions and/or options)
+      const processedQuiz = applyShuffleSettings(quizData)
+      
+      setQuiz(processedQuiz)
+      setTimeLeft(processedQuiz.duration * 60) // Convert minutes to seconds
       
       // Initialize empty answers
       const initialAnswers = {}
-      quizData.questions.forEach((q, idx) => {
+      processedQuiz.questions.forEach((q, idx) => {
         initialAnswers[q._id || idx] = ''
       })
       setAnswers(initialAnswers)
@@ -351,11 +407,14 @@ const TakeQuiz = ({ user }) => {
         return
       }
       
-      setQuiz(quizData)
-      setTimeLeft(quizData.duration * 60)
+      // Apply shuffle settings (questions and/or options)
+      const processedQuiz = applyShuffleSettings(quizData)
+      
+      setQuiz(processedQuiz)
+      setTimeLeft(processedQuiz.duration * 60)
       
       const initialAnswers = {}
-      quizData.questions.forEach((q, idx) => {
+      processedQuiz.questions.forEach((q, idx) => {
         initialAnswers[q._id || idx] = ''
       })
       setAnswers(initialAnswers)
