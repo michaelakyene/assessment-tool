@@ -314,6 +314,22 @@ const CreateQuizPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8">
       <div className="container mx-auto px-4 max-w-5xl">
+        {/* Mobile Device Notice - Only visible on small screens */}
+        <div className="lg:hidden bg-amber-50 border-l-4 border-amber-400 rounded-lg p-4 mb-6 shadow-sm">
+          <div className="flex items-start space-x-3">
+            <FiAlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-amber-900 mb-1">
+                Best Viewed on Desktop
+              </h3>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                For the best experience creating and editing quizzes, we recommend using a desktop or laptop computer. 
+                The mobile interface may have limited functionality.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between">
