@@ -70,7 +70,7 @@ exports.startAttempt = async (req, res) => {
     const attemptCount = await Attempt.countDocuments({
       quiz: quizId,
       user: req.user._id,
-      status: { $in: ['completed', 'timeout'] }
+      status: 'completed'
     });
 
     if (attemptCount >= quiz.maxAttempts) {

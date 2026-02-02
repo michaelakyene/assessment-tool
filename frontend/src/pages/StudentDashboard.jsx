@@ -340,11 +340,9 @@ const StudentDashboard = ({ user }) => {
                         <span className={`px-3 py-1 text-xs font-bold rounded-full ${
                           attempt.status === 'completed'
                             ? 'bg-green-100 text-green-800'
-                            : attempt.status === 'timeout'
-                            ? 'bg-red-100 text-red-800'
                             : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {attempt.status === 'timeout' ? 'Timed Out' : (attempt.status || 'completed')}
+                          {attempt.status || 'completed'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600 font-medium">

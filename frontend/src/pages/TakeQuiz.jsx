@@ -188,7 +188,6 @@ const TakeQuiz = ({ user }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [quizAccessToken, setQuizAccessToken] = useState(null)
   const hasSubmittedRef = useRef(false)
-  const isFinalizingRef = useRef(false)
 
   useEffect(() => {
     loadQuiz()
@@ -549,48 +548,17 @@ const TakeQuiz = ({ user }) => {
     }
   }
 
-  const finalizeAttemptAsTimeout = async () => {
-    if (!attemptId || !quiz || hasSubmittedRef.current || isFinalizingRef.current) return
-    isFinalizingRef.current = true
-
-    try {
-      await api.post('/attempts/timeout', { attemptId })
-    } catch (err) {
-      // Best-effort; avoid blocking navigation
-    }
-  }
-
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (!attemptId || !quiz || hasSubmittedRef.current || isFinalizingRef.current) return
-      isFinalizingRef.current = true
-
-      const token = localStorage.getItem('token')
-      const baseUrl = api.defaults.baseURL || ''
-      const url = `${baseUrl}/attempts/timeout`
-
-      try {
-        fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-          },
-          body: JSON.stringify({ attemptId }),
-          keepalive: true,
-          credentials: 'include'
-        })
-      } catch (e) {
-        // Ignore
+    const timer = setInterval(() => {
+      if (timeLeft > 0) {
+        setTimeLeft(prev => prev - 1)
+      } else if (timeLeft === 0 && quiz) {
+        handleAutoSubmit()
       }
-    }
+    }, 1000)
 
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-      finalizeAttemptAsTimeout()
-    }
-  }, [attemptId, quiz])
+    return () => clearInterval(timer)
+  }, [timeLeft, quiz])
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60)
