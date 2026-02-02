@@ -41,8 +41,10 @@ app.use(compression({ level: 6, threshold: 1000 }));
 
 // Enhanced CORS configuration with whitelist
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',') 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()) 
   : [process.env.FRONTEND_URL || 'http://localhost:5173'];
+
+console.log('🔒 Allowed CORS origins:', allowedOrigins);
 
 app.use(cors({
   origin: function(origin, callback) {
@@ -52,13 +54,16 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn(`CORS blocked origin: ${origin}`);
+      console.warn(`⚠️ CORS blocked origin: ${origin}`);
+      console.warn(`   Allowed origins:`, allowedOrigins);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Quiz-Access-Token']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Quiz-Access-Token'],
+  exposedHeaders: ['Content-Length', 'X-Request-Id'],
+  maxAge: 600 // Cache preflight for 10 minutes
 }));
 
 // Data sanitization

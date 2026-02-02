@@ -3,10 +3,15 @@ const quizHandlers = require('./quizHandlers');
 const notificationHandlers = require('./notificationHandlers');
 
 module.exports = (server) => {
+  const allowedOrigins = process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+    : [process.env.FRONTEND_URL || 'http://localhost:5173'];
+
   const io = socketIO(server, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-      credentials: true
+      origin: allowedOrigins,
+      credentials: true,
+      methods: ['GET', 'POST']
     }
   });
 
