@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { FiArrowLeft, FiCheckCircle, FiClock, FiAlertCircle, FiX, FiEye, FiEyeOff, FiChevronLeft, FiChevronRight, FiFlag, FiMenu, FiList } from 'react-icons/fi'
 import api from '../services/api'
@@ -187,6 +187,8 @@ const TakeQuiz = ({ user }) => {
   const [showSidebar, setShowSidebar] = useState(false)
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [quizAccessToken, setQuizAccessToken] = useState(null)
+  const hasSubmittedRef = useRef(false)
+  const isFinalizingRef = useRef(false)
 
   useEffect(() => {
     loadQuiz()
@@ -261,6 +263,14 @@ const TakeQuiz = ({ user }) => {
     })
   }
 
+  const handleContentProtection = (e) => {
+    e.preventDefault()
+    setToast({
+      message: 'Copying is disabled during the quiz.',
+      type: 'error'
+    })
+  }
+
   const ensureAttemptId = async () => {
     if (attemptId) return attemptId
 
@@ -277,7 +287,7 @@ const TakeQuiz = ({ user }) => {
         }
       )
 
-      const newAttemptId = attemptResponse?.attempt?._id
+      const newAttemptId = attemptResponse?.attempt?._id || attemptResponse?.attemptId || attemptResponse?._id
       if (!newAttemptId) {
         throw new Error('Attempt ID not returned')
       }
@@ -285,7 +295,14 @@ const TakeQuiz = ({ user }) => {
       setAttemptId(newAttemptId)
       return newAttemptId
     } catch (err) {
-      setError('Unable to initialize your attempt. Please refresh and try again.')
+      if (err?.requiresPassword) {
+        setShowPasswordModal(true)
+        setError('')
+        return null
+      }
+
+      const errorMessage = err?.message || err?.error || err || 'Unable to initialize your attempt. Please refresh and try again.'
+      setError(errorMessage)
       return null
     } finally {
       setIsAttemptStarting(false)
@@ -461,14 +478,19 @@ const TakeQuiz = ({ user }) => {
     }))
   }
 
-  const handleAutoSubmit = () => {
-    if (!submitting) {
-      setToast({
-        message: 'Time is up! Submitting your quiz...',
-        type: 'warning'
-      })
-      handleSubmit()
+  const handleAutoSubmit = async () => {
+    if (submitting) return
+    setToast({
+      message: 'Time is up! Submitting your quiz...',
+      type: 'warning'
+    })
+
+    if (!attemptId) {
+      const ensuredAttemptId = await ensureAttemptId()
+      if (!ensuredAttemptId) return
     }
+
+    handleSubmit()
   }
 
   const handleSubmit = async () => {
@@ -506,6 +528,7 @@ const TakeQuiz = ({ user }) => {
 // Debug log removed
       
       const attemptData = response
+      hasSubmittedRef.current = true
       
       // Clear saved progress from localStorage
       const storageKey = `quiz_${id}_attempt_${attemptId}`
@@ -525,6 +548,49 @@ const TakeQuiz = ({ user }) => {
       setSubmitting(false)
     }
   }
+
+  const finalizeAttemptAsTimeout = async () => {
+    if (!attemptId || !quiz || hasSubmittedRef.current || isFinalizingRef.current) return
+    isFinalizingRef.current = true
+
+    try {
+      await api.post('/attempts/timeout', { attemptId })
+    } catch (err) {
+      // Best-effort; avoid blocking navigation
+    }
+  }
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (!attemptId || !quiz || hasSubmittedRef.current || isFinalizingRef.current) return
+      isFinalizingRef.current = true
+
+      const token = localStorage.getItem('token')
+      const baseUrl = api.defaults.baseURL || ''
+      const url = `${baseUrl}/attempts/timeout`
+
+      try {
+        fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ attemptId }),
+          keepalive: true,
+          credentials: 'include'
+        })
+      } catch (e) {
+        // Ignore
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      finalizeAttemptAsTimeout()
+    }
+  }, [attemptId, quiz])
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60)
@@ -864,7 +930,12 @@ const TakeQuiz = ({ user }) => {
                         </span>
                       )}
                     </div>
-                    <h3 className="text-base font-semibold text-gray-900">
+                    <h3
+                      className="text-base font-semibold text-gray-900 select-none"
+                      onCopy={handleContentProtection}
+                      onCut={handleContentProtection}
+                      onContextMenu={handleContentProtection}
+                    >
                       {question.question || question.text}
                     </h3>
                   </div>
@@ -883,7 +954,12 @@ const TakeQuiz = ({ user }) => {
 
                 <div className="mt-4">
                   {question.type === 'mcq' && (
-                    <div className="space-y-3">
+                    <div
+                      className="space-y-3 select-none"
+                      onCopy={handleContentProtection}
+                      onCut={handleContentProtection}
+                      onContextMenu={handleContentProtection}
+                    >
                       {question.options.map((option, idx) => (
                         <div key={idx} className="flex items-center p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
                           <input
@@ -907,7 +983,12 @@ const TakeQuiz = ({ user }) => {
                   )}
 
                   {question.type === 'true_false' && (
-                    <div className="space-y-3">
+                    <div
+                      className="space-y-3 select-none"
+                      onCopy={handleContentProtection}
+                      onCut={handleContentProtection}
+                      onContextMenu={handleContentProtection}
+                    >
                       {['True', 'False'].map((option) => (
                         <div key={option} className="flex items-center p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
                           <input

@@ -549,8 +549,8 @@ const QuizModal = ({ isOpen, onClose, onSave, quiz = null }) => {
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="">Select answer</option>
-                        <option value="true">True</option>
-                        <option value="false">False</option>
+                        <option value="True">True</option>
+                        <option value="False">False</option>
                       </select>
                     ) : (
                       <input

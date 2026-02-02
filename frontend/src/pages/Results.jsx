@@ -94,8 +94,11 @@ const Results = ({ user }) => {
   if (!attempt) return null
 
   const quiz = attempt.quiz || attempt.quizId
-  const letterGrade = getLetterGrade(attempt.percentage)
-  const isPassed = attempt.percentage >= (quiz.passingScore || 50)
+  const normalizedPercentage = Number.isFinite(Number(attempt.percentage))
+    ? Math.round(Number(attempt.percentage))
+    : 0
+  const letterGrade = getLetterGrade(normalizedPercentage)
+  const isPassed = normalizedPercentage >= (quiz.passingScore || 50)
   const correctAnswers = attempt.answers?.filter(a => a.isCorrect).length || 0
   const incorrectAnswers = attempt.answers?.filter(a => !a.isCorrect).length || 0
   const totalQuestions = quiz.questions?.length ?? quiz.questionCount ?? 0
@@ -118,12 +121,12 @@ const Results = ({ user }) => {
 
       {/* Header */}
       <div className="bg-white rounded-lg shadow p-8 mb-8">
-        <div className="flex justify-between items-start mb-8">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{quiz.title}</h1>
             <p className="text-gray-600 mt-2">Attempt #{attempt._id || attempt.id} • {format(new Date(attempt.endTime), 'MMM d, yyyy h:mm a')}</p>
           </div>
-          <div className="text-right">
+          <div className="md:text-right">
             <div className="text-sm text-gray-500">Submitted by</div>
             <div className="font-medium">{user.name}</div>
             <div className="text-xs text-gray-500 mt-1">({user.role})</div>
@@ -147,7 +150,7 @@ const Results = ({ user }) => {
             <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg mb-3">
               <FiPercent className="w-6 h-6 text-blue-600" />
             </div>
-            <div className="text-3xl font-bold text-blue-700 mb-1">{attempt.percentage}%</div>
+            <div className="text-3xl font-bold text-blue-700 mb-1">{normalizedPercentage}%</div>
             <div className="text-sm text-blue-600">Score</div>
           </div>
           
@@ -362,32 +365,32 @@ const Results = ({ user }) => {
       )}
 
       {/* Action Buttons */}
-      <div className="flex justify-between items-center pt-8 border-t border-gray-200">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 pt-8 border-t border-gray-200">
         <button
           onClick={() => navigate('/')}
-          className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+          className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full md:w-auto"
         >
           Back to Dashboard
         </button>
-        <div className="flex space-x-4">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 w-full md:w-auto">
           {/* Only show retake button if attempts are remaining */}
           {attemptCount < (quiz.maxAttempts || 1) && (
             <button
               onClick={() => navigate(`/quiz/${quiz._id || quiz.id}`)}
-              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors w-full sm:w-auto"
             >
               Retake Quiz ({quiz.maxAttempts - attemptCount} attempt{quiz.maxAttempts - attemptCount !== 1 ? 's' : ''} remaining)
             </button>
           )}
           {attemptCount >= (quiz.maxAttempts || 1) && (
-            <div className="px-6 py-2.5 bg-gray-100 text-gray-500 rounded-lg font-medium cursor-not-allowed flex items-center space-x-2">
+            <div className="px-6 py-2.5 bg-gray-100 text-gray-500 rounded-lg font-medium cursor-not-allowed flex items-center space-x-2 w-full sm:w-auto justify-center">
               <FiAlertCircle className="w-4 h-4" />
               <span>All attempts used</span>
             </div>
           )}
           <button
             onClick={() => window.print()}
-            className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+            className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full sm:w-auto"
           >
             Print Results
           </button>

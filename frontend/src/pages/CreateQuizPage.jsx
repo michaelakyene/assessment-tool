@@ -53,14 +53,21 @@ const CreateQuizPage = () => {
       const data = await getQuizById(id)
       console.log('✅ Quiz loaded:', data)
       
-      const mappedQuestions = (data.quiz?.questions || data.questions || []).map((q) => ({
-        type: q.type === 'mcq' ? 'multiple_choice' : q.type,
-        questionText: q.questionText || q.text || '',
-        options: q.options || [],
-        correctAnswer: q.correctAnswer || '',
-        marks: q.marks || 1,
-        explanation: q.explanation || ''
-      }))
+      const mappedQuestions = (data.quiz?.questions || data.questions || []).map((q) => {
+        const normalizedType = q.type === 'mcq' ? 'multiple_choice' : q.type
+        const normalizedCorrectAnswer = normalizedType === 'true_false'
+          ? (String(q.correctAnswer || '').trim().toLowerCase() === 'true' ? 'True' : String(q.correctAnswer || '').trim().toLowerCase() === 'false' ? 'False' : '')
+          : (q.correctAnswer || '')
+
+        return {
+          type: normalizedType,
+          questionText: q.questionText || q.text || '',
+          options: q.options || [],
+          correctAnswer: normalizedCorrectAnswer,
+          marks: q.marks || 1,
+          explanation: q.explanation || ''
+        }
+      })
       
       const quizData = data.quiz || data
       setFormData({
@@ -834,8 +841,8 @@ const CreateQuizPage = () => {
                             <input
                               type="radio"
                               name="correctAnswer"
-                              value="true"
-                              checked={currentQuestion.correctAnswer === 'true'}
+                              value="True"
+                              checked={currentQuestion.correctAnswer === 'True'}
                               onChange={handleQuestionChange}
                               className="w-4 h-4 text-blue-600"
                             />
@@ -845,8 +852,8 @@ const CreateQuizPage = () => {
                             <input
                               type="radio"
                               name="correctAnswer"
-                              value="false"
-                              checked={currentQuestion.correctAnswer === 'false'}
+                              value="False"
+                              checked={currentQuestion.correctAnswer === 'False'}
                               onChange={handleQuestionChange}
                               className="w-4 h-4 text-blue-600"
                             />

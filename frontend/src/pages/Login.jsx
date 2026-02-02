@@ -14,6 +14,7 @@ const Login = ({ login }) => {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState([])
   const [showPassword, setShowPassword] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState(0)
 
@@ -44,6 +45,7 @@ const Login = ({ login }) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setFieldErrors([])
     setLoading(true)
 
     try {
@@ -58,6 +60,11 @@ const Login = ({ login }) => {
         })
 // Debug log removed
       } else {
+        if (passwordStrength < 4) {
+          setError('Please use a strong password before creating an account.')
+          setLoading(false)
+          return
+        }
         // Register
         const registerData = {
           name: formData.name,
@@ -81,11 +88,24 @@ const Login = ({ login }) => {
       navigate('/')
     } catch (err) {
       const errorMessage = err.message || err.error || 'Authentication failed. Please try again.'
+      const validationErrors = Array.isArray(err?.errors)
+        ? err.errors.map(item => ({ field: item.field, message: item.message }))
+        : []
+
       setError(errorMessage)
+      setFieldErrors(validationErrors)
     } finally {
       setLoading(false)
     }
   }
+
+  const passwordRequirements = [
+    { label: 'At least 8 characters', met: formData.password.length >= 8 },
+    { label: 'At least 1 uppercase letter', met: /[A-Z]/.test(formData.password) },
+    { label: 'At least 1 lowercase letter', met: /[a-z]/.test(formData.password) },
+    { label: 'At least 1 number', met: /\d/.test(formData.password) },
+    { label: 'At least 1 special character', met: /[^a-zA-Z0-9]/.test(formData.password) }
+  ]
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 fixed inset-0 overflow-hidden">
@@ -121,6 +141,13 @@ const Login = ({ login }) => {
                     </div>
                     <div className="flex-1">
                       <p className="text-sm text-red-700 font-medium">{error}</p>
+                      {!isLogin && fieldErrors.length > 0 && (
+                        <ul className="mt-2 list-disc list-inside text-xs text-red-600 space-y-1">
+                          {fieldErrors.map((item, idx) => (
+                            <li key={`${item.field}-${idx}`}>{item.message}</li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -268,13 +295,23 @@ const Login = ({ login }) => {
                         }`}
                       />
                     </div>
+                    <div className="mt-2 grid grid-cols-1 gap-1 text-xs">
+                      {passwordRequirements.map(req => (
+                        <div key={req.label} className="flex items-center justify-between">
+                          <span className={req.met ? 'text-green-600' : 'text-gray-500'}>{req.label}</span>
+                          <span className={req.met ? 'text-green-600' : 'text-gray-400'}>
+                            {req.met ? '✓' : '•'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (!isLogin && passwordStrength < 4)}
                 className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 sm:py-3.5 rounded-lg font-semibold text-base sm:text-base shadow-lg hover:shadow-xl hover:from-indigo-700 hover:to-purple-700 transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
               >
                 {loading ? (
