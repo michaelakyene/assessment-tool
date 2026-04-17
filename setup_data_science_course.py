@@ -174,6 +174,241 @@ def make_standard_notebook(module_name: str, notebook_name: str) -> nbf.Notebook
     return nb
 
 
+def make_project_notebook(notebook_name: str) -> nbf.NotebookNode:
+    title = notebook_name.replace(".ipynb", "").replace("_", " ")
+
+    scenario_map = {
+        "01_EDA_Project.ipynb": "Analyze supermarket transaction behavior and identify drivers of weekly revenue.",
+        "02_Visualization_Project.ipynb": "Create an executive-ready visualization story for city transportation usage.",
+        "03_Simple_ML_Project.ipynb": "Build a baseline model to predict telecom customer churn.",
+        "04_Portfolio_Packaging.ipynb": "Package your project into a hiring-manager-ready portfolio artifact.",
+    }
+
+    nb = make_standard_notebook("08_Data_Projects", notebook_name)
+    nb.cells.insert(
+        3,
+        nbf.v4.new_markdown_cell(
+            "## Project Brief\n"
+            f"**Scenario:** {scenario_map.get(notebook_name, 'Solve a practical business analytics problem.')}\n\n"
+            "### Deliverables\n"
+            "- Business question and success metric\n"
+            "- Cleaned dataset and reproducible code\n"
+            "- Visual narrative for non-technical stakeholders\n"
+            "- Final recommendation with risks and next steps"
+        ),
+    )
+
+    if notebook_name == "01_EDA_Project.ipynb":
+        nb.cells.extend([
+            nbf.v4.new_markdown_cell(
+                "## EDA Project Tasks\n"
+                "1. Profile data quality (nulls, duplicates, outliers).\n"
+                "2. Build 5+ visuals across univariate and bivariate analysis.\n"
+                "3. Segment customers/products and summarize key behavior patterns."
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Challenge Task\n"
+                "Propose two experiments the business can run next month and define success metrics."
+            ),
+        ])
+    elif notebook_name == "02_Visualization_Project.ipynb":
+        nb.cells.extend([
+            nbf.v4.new_markdown_cell(
+                "## Visualization Project Tasks\n"
+                "1. Build a visual story with beginning-middle-end structure.\n"
+                "2. Use color and annotation intentionally for executive clarity.\n"
+                "3. Include one misleading chart example and correct it."
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Challenge Task\n"
+                "Create two versions of the same findings: one for executives and one for operations teams."
+            ),
+        ])
+    elif notebook_name == "03_Simple_ML_Project.ipynb":
+        nb.cells.extend([
+            nbf.v4.new_code_cell(
+                "# Baseline ML workflow template\n"
+                "from sklearn.model_selection import train_test_split\n"
+                "from sklearn.linear_model import LogisticRegression\n"
+                "from sklearn.metrics import classification_report, confusion_matrix\n"
+                "\n"
+                "X = df[['monthly_spend', 'sessions']]\n"
+                "y = df['churn']\n"
+                "\n"
+                "X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)\n"
+                "model = LogisticRegression(max_iter=500)\n"
+                "model.fit(X_train, y_train)\n"
+                "pred = model.predict(X_test)\n"
+                "print(classification_report(y_test, pred))\n"
+                "print(confusion_matrix(y_test, pred))"
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Challenge Task\n"
+                "Tune one model hyperparameter and compare metrics before/after. Explain which metric matters most for the business case."
+            ),
+        ])
+    else:
+        nb.cells.extend([
+            nbf.v4.new_markdown_cell(
+                "## Portfolio Checklist\n"
+                "- Problem framing in plain language\n"
+                "- Clean reproducible notebook\n"
+                "- README with visuals and key insights\n"
+                "- Reflection: what you would improve with more time"
+            ),
+        ])
+
+    return nb
+
+
+def make_capstone_notebook(notebook_name: str) -> nbf.NotebookNode:
+    title = notebook_name.replace(".ipynb", "").replace("_", " ")
+    nb = nbf.v4.new_notebook()
+
+    common_intro = [
+        nbf.v4.new_markdown_cell(
+            f"# {title}\n\n"
+            "**Module:** 09_Capstone_Project\n\n"
+            "This capstone module transforms your learning into a portfolio-ready, real-world project."
+        ),
+        nbf.v4.new_markdown_cell(
+            "## Learning Objectives\n"
+            "- Define a business-relevant data science problem\n"
+            "- Plan and execute an end-to-end project workflow\n"
+            "- Communicate impact, limitations, and next actions\n"
+            "- Evaluate quality with a professional rubric"
+        ),
+    ]
+
+    if notebook_name == "01_Capstone_Problem_Definition.ipynb":
+        cells = common_intro + [
+            nbf.v4.new_markdown_cell(
+                "## Real-World Problem Definition\n"
+                "**Problem:** A telecom company has rising customer churn and wants to proactively retain at-risk users.\n"
+                "\n"
+                "### Business Goal\n"
+                "Reduce churn by 10% over two quarters while preserving marketing efficiency.\n"
+                "\n"
+                "### Data Science Goal\n"
+                "Build a churn risk segmentation solution and identify key behavioral drivers of churn."
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Dataset Suggestions\n"
+                "- IBM Telco Customer Churn dataset\n"
+                "- Bank Marketing dataset\n"
+                "- E-commerce subscription retention data (public/open)\n"
+                "- Simulated SaaS churn dataset in `Data Science/datasets/`"
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Practice Exercises\n"
+                "1. Rewrite the problem statement for healthcare or education.\n"
+                "2. Define at least 3 measurable success metrics.\n"
+                "3. Identify bias and fairness risks in the available features."
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Challenge Task\n"
+                "Draft a one-page project charter with scope, constraints, and expected impact."
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Summary\n"
+                "A strong capstone starts with sharp problem framing, realistic constraints, and measurable outcomes."
+            ),
+        ]
+    elif notebook_name == "02_Capstone_Execution_Guide.ipynb":
+        cells = common_intro + [
+            nbf.v4.new_markdown_cell(
+                "## Step-by-Step Project Guidance\n"
+                "1. Frame the problem and define stakeholders.\n"
+                "2. Acquire and document data sources.\n"
+                "3. Perform cleaning and feature engineering.\n"
+                "4. Conduct exploratory analysis and identify hypotheses.\n"
+                "5. Build baseline and improved models (if predictive).\n"
+                "6. Evaluate with technical + business metrics.\n"
+                "7. Communicate recommendations with visuals.\n"
+                "8. Define deployment and monitoring plan."
+            ),
+            nbf.v4.new_code_cell(
+                "# Capstone workflow starter\n"
+                "import pandas as pd\n"
+                "\n"
+                "# Example: load your dataset\n"
+                "# df = pd.read_csv('../datasets/your_dataset.csv')\n"
+                "\n"
+                "print('Replace this cell with your capstone data-loading logic.')"
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Practice Exercises\n"
+                "- Create a milestone plan with weekly checkpoints.\n"
+                "- Define risks and fallback strategies for each stage.\n"
+                "- Specify what would count as project failure and why."
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Challenge Task\n"
+                "Create a reproducible project timeline that can be executed by another teammate without clarification calls."
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Summary\n"
+                "Execution quality determines capstone credibility: reproducibility, clarity, and stakeholder alignment matter as much as modeling."
+            ),
+        ]
+    elif notebook_name == "03_Capstone_Evaluation_Rubric.ipynb":
+        cells = common_intro + [
+            nbf.v4.new_markdown_cell(
+                "## Evaluation Criteria (100 points)\n"
+                "- Problem framing and business relevance: **15**\n"
+                "- Data quality handling and feature design: **20**\n"
+                "- EDA depth and insight quality: **15**\n"
+                "- Modeling/statistical rigor: **20**\n"
+                "- Communication and visualization clarity: **15**\n"
+                "- Reproducibility and code quality: **10**\n"
+                "- Reflection, limitations, and next steps: **5**"
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Performance Bands\n"
+                "- **Outstanding (90–100):** clear business impact, robust methods, and professional communication\n"
+                "- **Strong (75–89):** sound workflow with minor gaps\n"
+                "- **Developing (60–74):** partial execution, weak linkage between analysis and decisions\n"
+                "- **Needs Work (<60):** major reproducibility or reasoning gaps"
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Challenge Task\n"
+                "Self-assess your capstone using this rubric, then list top 3 upgrades to move one performance band higher."
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Summary\n"
+                "Use this rubric as both grading criteria and a quality checklist before publishing your portfolio project."
+            ),
+        ]
+    else:
+        cells = common_intro + [
+            nbf.v4.new_markdown_cell(
+                "## Capstone Presentation Guidance\n"
+                "Recommended deck flow:\n"
+                "1. Business context and problem\n"
+                "2. Data and methodology\n"
+                "3. Key findings\n"
+                "4. Recommendations and expected impact\n"
+                "5. Limitations and future work"
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Practice Exercises\n"
+                "- Prepare a 5-minute executive pitch and a 12-minute technical walkthrough.\n"
+                "- Create one slide that translates metrics into financial/business impact."
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Challenge Task\n"
+                "Record a mock presentation and critique clarity, confidence, and evidence quality."
+            ),
+            nbf.v4.new_markdown_cell(
+                "## Summary\n"
+                "A capstone is complete only when insights are understandable, actionable, and persuasive to real stakeholders."
+            ),
+        ]
+
+    nb.cells = cells
+    return nb
+
+
 def make_full_intro_notebook() -> nbf.NotebookNode:
     nb = nbf.v4.new_notebook()
     nb.cells = [
@@ -413,8 +648,13 @@ def generate_notebooks() -> None:
     for module, notebooks in COURSE_STRUCTURE.items():
         for notebook in notebooks:
             notebook_path = os.path.join(ROOT, module, notebook)
+
             if module == "01_Introduction_to_Data_Science" and notebook == "01_What_is_Data_Science.ipynb":
                 nb = make_full_intro_notebook()
+            elif module == "08_Data_Projects":
+                nb = make_project_notebook(notebook)
+            elif module == "09_Capstone_Project":
+                nb = make_capstone_notebook(notebook)
             else:
                 nb = make_standard_notebook(module, notebook)
 
@@ -426,8 +666,8 @@ def print_tree() -> None:
     print("Data Science/")
     for module, notebooks in COURSE_STRUCTURE.items():
         print(f"├── {module}/")
-        for nb in notebooks:
-            print(f"│   ├── {nb}")
+        for nb_name in notebooks:
+            print(f"│   ├── {nb_name}")
     print("├── datasets/")
     print("│   └── README.md")
     print("└── resources/")
